@@ -1,5 +1,5 @@
 import { config, getQuestions, bridge, sameOrigin } from '@/lib/server';
-import { cleanAnswers, validate } from '@/lib/survey';
+import { cleanAnswers, validate, formatPhoneNumber } from '@/lib/survey';
 export async function POST(r: Request) {
   if (!sameOrigin(r))
     return Response.json({ error: '잘못된 요청입니다.' }, { status: 403 });
@@ -29,6 +29,8 @@ export async function POST(r: Request) {
     const answers = cleanAnswers(qs, body.answers),
       error = validate(qs, answers);
     if (error) return Response.json({ error }, { status: 400 });
+    if (typeof answers.Q30 === 'string')
+      answers.Q30 = formatPhoneNumber(answers.Q30);
     const c = await config();
     if (!c.ready)
       return Response.json(

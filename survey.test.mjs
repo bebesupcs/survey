@@ -35,3 +35,9 @@ assert.equal(call(submit).ok,true);assert.equal(call(submit).ok,true);assert.equ
 const sheet=sheets.get('베베숲_응답');assert.equal(sheet.rows.length,2);const header=sheet.rows[0],row=sheet.rows[1];assert.equal(row[header.indexOf('Q22')],0);assert.equal(row[header.indexOf('Q30')],"'01012345678");assert.equal(row[header.indexOf('Q1 | '+questions[0].options[0])],1);assert.equal(row[header.indexOf('Q1 | '+questions[0].options[1])],0);assert.equal(row[header.indexOf('Q29')],"'=SUM(A1:A3)");
 context.deleteInterviewContacts();assert.equal(sheet.rows[1][header.indexOf('Q29')],'');assert.equal(sheet.rows[1][header.indexOf('Q30')],'');assert.equal(sheet.rows[1][header.indexOf('Q22')],0);
 console.log('PASS: bridge writes, duplicate retry, checkbox statistics, NPS numeric zero, phone leading zero and scheduled contact deletion.');
+import {isValidPhoneNumber,formatPhoneNumber} from './lib/survey.ts';
+for(const value of ['01012345678','010-1234-5678','010 1234 5678']){assert.equal(isValidPhoneNumber(value),true);assert.equal(formatPhoneNumber(value),'010-1234-5678');}
+for(const value of ['0101234567','010123456789','0212345678','010abcd5678','+821012345678']){assert.equal(isValidPhoneNumber(value),false);assert.equal(formatPhoneNumber(value),value);}
+assert.equal(formatPhoneNumber('0111234567'),'011-123-4567');
+assert.equal(formatPhoneNumber(''),'');assert.equal(formatPhoneNumber('010123'),'010123');
+console.log('PASS: phone normalization, hyphenated input, spaces, invalid length/prefix/letters and partial input.');

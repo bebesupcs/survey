@@ -407,11 +407,7 @@ export function validate(qs: Question[], a: Answers) {
       return `${q.id}의 답변을 확인해주세요.`;
     else if (['single', 'score'].includes(q.type) && !q.options.includes(v))
       return `${q.id}의 선택 항목을 확인해주세요.`;
-    if (
-      q.type === 'phone' &&
-      typeof v === 'string' &&
-      !/^01[016789]\d{7,8}$/.test(v.replace(/[-\s]/g, ''))
-    )
+    if (q.type === 'phone' && typeof v === 'string' && !isValidPhoneNumber(v))
       return '휴대전화 번호를 확인해주세요.';
     if (v === '기타 브랜드' && !String(a[q.id + '_other'] ?? '').trim())
       return `${q.id}의 브랜드명을 적어주세요.`;
@@ -422,4 +418,15 @@ export function validate(qs: Question[], a: Answers) {
       return `${q.id}의 기타 답변은 1,000자 이내로 적어주세요.`;
   }
   return '';
+}
+
+export function isValidPhoneNumber(value: string) {
+  return /^(?:010\d{8}|01[16789]\d{7,8})$/.test(value.replace(/[-\s]/g, ''));
+}
+export function formatPhoneNumber(value: string) {
+  if (!isValidPhoneNumber(value)) return value;
+  const digits = value.replace(/[-\s]/g, '');
+  return (
+    digits.slice(0, 3) + '-' + digits.slice(3, -4) + '-' + digits.slice(-4)
+  );
 }

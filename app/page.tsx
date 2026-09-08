@@ -10,6 +10,8 @@ import {
   cleanAnswers,
   validate,
   privacy,
+  isValidPhoneNumber,
+  formatPhoneNumber,
   type Answers,
   type Question,
 } from '@/lib/survey';
@@ -266,12 +268,28 @@ export default function Home() {
                       {q.title}
                     </legend>
                     {q.hint && <p className="muted">{q.hint}</p>}
+                    {q.type === 'phone' && (
+                      <p id="phone-help" className="muted">
+                        하이픈 없이 입력해도 괜찮습니다. 입력을 마치면 자동으로
+                        정리됩니다. 예: 010-1234-5678
+                      </p>
+                    )}
                     {q.type === 'text' || q.type === 'phone' ? (
                       q.type === 'phone' ? (
                         <input
                           aria-labelledby={q.id + '-label'}
                           type="tel"
                           autoComplete="tel"
+                          inputMode="numeric"
+                          aria-describedby="phone-help"
+                          onBlur={(e) => {
+                            const value = e.target.value;
+                            update(q.id, formatPhoneNumber(value));
+                            if (value && !isValidPhoneNumber(value))
+                              setError(
+                                '휴대전화 번호를 확인해주세요. 010 번호는 숫자 11자리로 입력해주세요.',
+                              );
+                          }}
                           maxLength={20}
                           placeholder="010-0000-0000"
                           value={String(v ?? '')}
@@ -372,6 +390,12 @@ export default function Home() {
               {error && (
                 <p role="alert" className="error">
                   {error}
+                </p>
+              )}
+              {loaded && !ready && pos === groups.length - 1 && (
+                <p className="notice" role="status">
+                  현재 검토용 설문으로, 응답 접수가 시작되지 않았습니다. 입력한
+                  답변은 아직 제출되지 않았습니다.
                 </p>
               )}
               <div className="navigation">
