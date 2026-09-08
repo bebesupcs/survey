@@ -78,7 +78,7 @@ export default function Editor() {
     <>
       <header className="topbar">
         <a className="brand" href="/">
-          bebesup<span>설문 관리</span>
+          <img src="/bebesup-logo.png" alt="베베숲 Bebesup" className="brand-logo" /><span>설문 관리</span>
         </a>
         <a href="/" target="_blank" rel="noreferrer">
           설문 미리보기 ↗

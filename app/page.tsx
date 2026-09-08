@@ -150,7 +150,7 @@ export default function Home() {
     <>
       <header className="topbar">
         <a className="brand" href="/">
-          bebesup<span>베베숲</span>
+          <img src="/bebesup-logo.png" alt="베베숲 Bebesup" className="brand-logo" />
         </a>
         <span>고객 경험 설문</span>
       </header>

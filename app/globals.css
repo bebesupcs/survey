@@ -357,3 +357,7 @@ footer {
     display: block;
   }
 }
+
+.brand { display: flex; align-items: center; }
+.brand-logo { display: block; width: 166px; height: auto; }
+@media (max-width: 600px) { .brand-logo { width: 132px; } }
