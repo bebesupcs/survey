@@ -1,0 +1,359 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+@custom-variant dark (&:is(.dark *));
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-input: var(--input);
+  --color-muted: var(--muted);
+  --color-ring: var(--primary);
+  --color-border: var(--input);
+  --color-destructive: #b43b32;
+}
+:root,
+.dark {
+  --background: #f3f6f5;
+  --foreground: #193e39;
+  --primary: #087768;
+  --primary-foreground: #fff;
+  --input: #cddbd6;
+  --muted: #e6eeeb;
+  --radius: 0.6rem;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  font-size: 16px;
+  line-height: 1.65;
+}
+button,
+input,
+textarea {
+  font: inherit;
+}
+button,
+a,
+input,
+textarea {
+  touch-action: manipulation;
+}
+button,
+a {
+  cursor: pointer;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+.topbar {
+  height: 94px;
+  padding: 0 6%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #dce5e1;
+  background: #fff;
+}
+.topbar > span {
+  font-size: 14px;
+  color: #5c756e;
+}
+.brand {
+  font-size: 32px;
+  font-weight: 850;
+  letter-spacing: -1.5px;
+}
+.brand span {
+  font-size: 14px;
+  font-weight: 600;
+  margin-left: 14px;
+  letter-spacing: 0;
+}
+.shell {
+  max-width: 1260px;
+  margin: 0 auto;
+  padding: 62px 32px;
+  display: grid;
+  grid-template-columns: 390px minmax(0, 1fr);
+  gap: 65px;
+}
+.shell aside {
+  padding-top: 22px;
+  position: sticky;
+  top: 35px;
+  align-self: start;
+}
+.eyebrow {
+  font-size: 12px;
+  letter-spacing: 2px;
+  font-weight: 700;
+  color: #087768;
+}
+h1 {
+  font-size: 34px;
+  line-height: 1.55;
+  letter-spacing: -1.4px;
+  margin: 22px 0;
+}
+aside p {
+  color: #5c756e;
+}
+.side-note {
+  font-size: 13px;
+  margin: 26px 0 40px;
+}
+.steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.steps li {
+  padding: 13px 0;
+  color: #83968e;
+  font-size: 14px;
+}
+.steps li.active {
+  color: #087768;
+  font-weight: 800;
+}
+.paper {
+  background: #fff;
+  border: 1px solid #dce5e1;
+  border-radius: 20px;
+  padding: 36px 40px;
+  box-shadow: 0 8px 35px #173a3105;
+}
+.section-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #087768;
+  margin-bottom: 14px;
+  font-weight: 700;
+}
+h2 {
+  font-size: 27px;
+  line-height: 1.5;
+  letter-spacing: -0.8px;
+  margin: 30px 0 10px;
+}
+.muted {
+  color: #6c8079;
+  font-size: 14px;
+}
+.paper fieldset {
+  border: 0;
+  padding: 0;
+  margin: 32px 0 40px;
+  min-width: 0;
+}
+.paper legend {
+  font-size: 18px;
+  font-weight: 650;
+  line-height: 1.6;
+  margin-bottom: 18px;
+  display: block;
+  width: 100%;
+}
+legend small {
+  display: block;
+  font-size: 13px;
+  color: #087768;
+  margin-bottom: 7px;
+}
+legend b {
+  font-size: 12px;
+  margin-left: 10px;
+  color: #87978f;
+  font-weight: 500;
+}
+.choices {
+  display: grid;
+  gap: 10px;
+}
+.choice {
+  border: 1px solid #dce5e1;
+  min-height: 54px;
+  border-radius: 9px;
+  padding: 14px 16px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.choice:hover {
+  border-color: #76ab9e;
+}
+.choice.selected {
+  background: #edf7f3;
+  border-color: #087768;
+  color: #086659;
+}
+.navigation {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-top: 30px;
+  border-top: 1px solid #e2e9e6;
+  padding-top: 25px;
+}
+.primary,
+.secondary {
+  padding: 13px 24px;
+  border-radius: 8px;
+  border: 1px solid #cddbd6;
+  font-weight: 600;
+  background: white;
+}
+.primary {
+  background: #087768;
+  color: #fff;
+  border-color: #087768;
+  min-width: 150px;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+textarea,
+input[type='text'],
+input[type='tel'],
+input[type='url'],
+input[type='password'] {
+  width: 100%;
+  padding: 13px;
+  border: 1px solid #cddbd6;
+  border-radius: 8px;
+  background: #fff;
+  color: #193e39;
+}
+textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+footer {
+  text-align: center;
+  padding: 25px;
+  font-size: 12px;
+  color: #70887e;
+}
+.error {
+  color: #a6372e;
+  background: #fff2ef;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 14px;
+}
+.notice {
+  background: #edf7f3;
+  padding: 18px;
+  border-radius: 10px;
+  font-size: 14px;
+  white-space: pre-line;
+}
+.success {
+  text-align: center;
+  padding: 60px 0;
+}
+.admin {
+  max-width: 1040px;
+  margin: 35px auto;
+  padding: 24px;
+}
+.admin section {
+  padding: 26px;
+  margin: 24px 0;
+  border: 1px solid #dce5e1;
+  border-radius: 12px;
+  background: white;
+}
+.admin label {
+  display: block;
+  margin: 14px 0;
+}
+.admin details {
+  border-top: 1px solid #dce5e1;
+  padding: 16px 0;
+}
+.admin summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.admin .row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.admin .row > * {
+  flex: 1;
+}
+.score {
+  display: flex;
+  flex-wrap: wrap;
+}
+.score .choice {
+  justify-content: center;
+  min-width: 46px;
+  padding: 12px 8px;
+}
+.score [data-slot='radio-group-item'] {
+  position: absolute;
+  opacity: 0;
+}
+.choice:focus-within {
+  outline: 3px solid #80b6a6;
+  outline-offset: 2px;
+}
+@media (max-width: 900px) {
+  .shell {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding: 24px 18px;
+  }
+  .shell aside {
+    position: static;
+    padding: 0;
+  }
+  .steps,
+  .side-note,
+  .eyebrow {
+    display: none;
+  }
+  h1 {
+    font-size: 25px;
+    margin: 12px 0;
+  }
+  aside p {
+    font-size: 14px;
+    margin: 4px 0;
+  }
+  .paper {
+    padding: 26px 22px;
+  }
+  .topbar {
+    height: 74px;
+    padding: 0 22px;
+  }
+  .brand {
+    font-size: 28px;
+  }
+  h2 {
+    font-size: 24px;
+  }
+  .shell aside br {
+    display: none;
+  }
+  .shell aside h1 br {
+    display: block;
+  }
+}
