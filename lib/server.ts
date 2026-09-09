@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:workers';
 import { getChatGPTUser } from '@/app/chatgpt-auth';
-import { questions, type Question } from './survey';
+import { questions, hydrateQuestions, type Question } from './survey';
 import { normalizeEmail, hasAdminAccess } from './admin-access';
 export const runtime = () =>
   env as unknown as {
@@ -29,7 +29,7 @@ export async function getQuestions(
     .prepare('SELECT questions FROM survey_versions WHERE id=?')
     .bind(version)
     .first<{ questions: string }>();
-  return row ? JSON.parse(row.questions) : null;
+  return row ? hydrateQuestions(JSON.parse(row.questions)) : null;
 }
 export const ownerEmail = () => normalizeEmail(runtime().ADMIN_EMAIL || '');
 export const initialAdminEmails = () =>

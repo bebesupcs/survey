@@ -1,5 +1,18 @@
 export type Answer = string | string[];
 export type Answers = Record<string, Answer>;
+export type VisibilityOperator =
+  | 'equals'
+  | 'not_equals'
+  | 'one_of'
+  | 'not_one_of'
+  | 'answered'
+  | 'different_answer';
+export type VisibilityRule = {
+  questionId: string;
+  operator: VisibilityOperator;
+  values?: string[];
+  compareQuestionId?: string;
+};
 export type Question = {
   id: string;
   title: string;
@@ -9,6 +22,7 @@ export type Question = {
   options: string[];
   max?: number;
   hint?: string;
+  showWhen?: VisibilityRule[];
 };
 const q = (
   id: string,
@@ -326,48 +340,95 @@ export const questions: Question[] = [
   q('Q29', '성함 또는 닉네임을 적어주세요', 8, 'text', true),
   q('Q30', '연락 가능한 휴대전화 번호를 적어주세요', 8, 'phone', true),
 ];
-export const privacy =
-  '수집 항목: 성함 또는 닉네임, 휴대전화 번호\n수집 목적: 인터뷰 참여 의사 확인 및 대상자 선정, 인터뷰 일정 안내와 진행 관련 연락, 설문 또는 인터뷰 참여 혜택 제공\n보유 및 이용 기간: 인터뷰와 참여 혜택 제공이 종료된 날로부터 90일 이내 파기합니다.\n동의하지 않을 수 있으며, 이 경우 인터뷰 대상자 선정과 참여 혜택 제공이 어려울 수 있습니다. 동의하지 않아도 설문은 제출할 수 있습니다.';
-const index = (id: string, a: Answers) =>
-  questions.find((q) => q.id === id)!.options.indexOf(String(a[id] ?? ''));
-export function visible(q: Question, a: Answers) {
-  const s = index('Q12', a),
-    used = s >= 0 && s < 4,
-    current = s >= 0 && s < 3,
-    interview = [0, 1].includes(index('Q26', a)),
-    hard = used && [1, 2, 3].includes(index('Q14', a));
-  if (q.id === 'Q6') {
-    const prev = String(
-      a.Q5 === '기타 브랜드' ? a.Q5_other : a.Q5 || '',
-    ).trim();
-    const now = String(a.Q4 === '기타 브랜드' ? a.Q4_other : a.Q4 || '').trim();
-    return (
-      !!prev &&
-      !!now &&
-      ![
+const defaultShowWhen: Record<string, VisibilityRule[]> = {
+  Q6: [
+    { questionId: 'Q5', operator: 'answered' },
+    {
+      questionId: 'Q5',
+      operator: 'not_one_of',
+      values: [
         '이전에도 지금과 같은 브랜드를 사용함',
         '이전에 주로 사용한 브랜드가 없음',
         '정확히 기억나지 않음',
-      ].includes(prev) &&
-      now !== '브랜드를 정확히 기억하지 못함' &&
-      prev !== now
-    );
-  }
-  if (q.id === 'Q8') return index('Q7', a) === 0;
-  if (q.id === 'Q11') return [2, 3].includes(index('Q10', a));
-  if (['Q15', 'Q16'].includes(q.id)) return hard;
-  if (q.section === 4) return used;
-  if (q.id.endsWith('-A')) return current;
-  if (q.id.endsWith('-B')) return s === 3;
-  if (q.id.endsWith('-C')) return s === 4;
-  if (q.id === 'Q22') return used;
-  if (q.id === 'Q23') return used && a.Q22 !== undefined && a.Q22 !== '';
-  if (q.id === 'Q24') return s >= 0 && s !== 5;
-  if (q.id === 'Q25')
-    return s >= 0 && s !== 5 && index('Q24', a) >= 0 && index('Q24', a) < 4;
-  if (['Q27', 'Q28', 'Q31'].includes(q.id)) return interview;
-  if (['Q29', 'Q30'].includes(q.id)) return interview && index('Q31', a) === 0;
-  return true;
+      ],
+    },
+    {
+      questionId: 'Q5',
+      operator: 'different_answer',
+      compareQuestionId: 'Q4',
+    },
+  ],
+  Q8: [{ questionId: 'Q7', operator: 'equals', values: ['사용하고 있다'] }],
+  Q11: [
+    {
+      questionId: 'Q10',
+      operator: 'one_of',
+      values: ['찾기 어려운 편이었다', '매우 어려웠다'],
+    },
+  ],
+  Q13: [{ questionId: 'Q12', operator: 'one_of', values: questions.find((x) => x.id === 'Q12')!.options.slice(0, 4) }],
+  Q14: [{ questionId: 'Q12', operator: 'one_of', values: questions.find((x) => x.id === 'Q12')!.options.slice(0, 4) }],
+  Q15: [{ questionId: 'Q14', operator: 'one_of', values: questions.find((x) => x.id === 'Q14')!.options.slice(1, 4) }],
+  Q16: [{ questionId: 'Q14', operator: 'one_of', values: questions.find((x) => x.id === 'Q14')!.options.slice(1, 4) }],
+  Q17: [{ questionId: 'Q12', operator: 'one_of', values: questions.find((x) => x.id === 'Q12')!.options.slice(0, 4) }],
+  'Q18-A': [{ questionId: 'Q12', operator: 'one_of', values: questions.find((x) => x.id === 'Q12')!.options.slice(0, 3) }],
+  'Q19-A': [{ questionId: 'Q12', operator: 'one_of', values: questions.find((x) => x.id === 'Q12')!.options.slice(0, 3) }],
+  'Q20-A': [{ questionId: 'Q12', operator: 'one_of', values: questions.find((x) => x.id === 'Q12')!.options.slice(0, 3) }],
+  'Q21-A': [{ questionId: 'Q12', operator: 'one_of', values: questions.find((x) => x.id === 'Q12')!.options.slice(0, 3) }],
+  'Q18-B': [{ questionId: 'Q12', operator: 'equals', values: [questions.find((x) => x.id === 'Q12')!.options[3]] }],
+  'Q19-B': [{ questionId: 'Q12', operator: 'equals', values: [questions.find((x) => x.id === 'Q12')!.options[3]] }],
+  'Q20-B': [{ questionId: 'Q12', operator: 'equals', values: [questions.find((x) => x.id === 'Q12')!.options[3]] }],
+  'Q18-C': [{ questionId: 'Q12', operator: 'equals', values: [questions.find((x) => x.id === 'Q12')!.options[4]] }],
+  'Q19-C': [{ questionId: 'Q12', operator: 'equals', values: [questions.find((x) => x.id === 'Q12')!.options[4]] }],
+  Q22: [{ questionId: 'Q12', operator: 'one_of', values: questions.find((x) => x.id === 'Q12')!.options.slice(0, 4) }],
+  Q23: [
+    { questionId: 'Q12', operator: 'one_of', values: questions.find((x) => x.id === 'Q12')!.options.slice(0, 4) },
+    { questionId: 'Q22', operator: 'answered' },
+  ],
+  Q24: [{ questionId: 'Q12', operator: 'not_equals', values: [questions.find((x) => x.id === 'Q12')!.options[5]] }],
+  Q25: [{ questionId: 'Q24', operator: 'one_of', values: questions.find((x) => x.id === 'Q24')!.options.slice(0, 4) }],
+  Q27: [{ questionId: 'Q26', operator: 'one_of', values: questions.find((x) => x.id === 'Q26')!.options.slice(0, 2) }],
+  Q28: [{ questionId: 'Q26', operator: 'one_of', values: questions.find((x) => x.id === 'Q26')!.options.slice(0, 2) }],
+  Q31: [{ questionId: 'Q26', operator: 'one_of', values: questions.find((x) => x.id === 'Q26')!.options.slice(0, 2) }],
+  Q29: [
+    { questionId: 'Q26', operator: 'one_of', values: questions.find((x) => x.id === 'Q26')!.options.slice(0, 2) },
+    { questionId: 'Q31', operator: 'equals', values: ['동의합니다'] },
+  ],
+  Q30: [
+    { questionId: 'Q26', operator: 'one_of', values: questions.find((x) => x.id === 'Q26')!.options.slice(0, 2) },
+    { questionId: 'Q31', operator: 'equals', values: ['동의합니다'] },
+  ],
+};
+export function hydrateQuestions(items: Question[]) {
+  return items.map((item) => ({
+    ...item,
+    showWhen: item.showWhen ?? defaultShowWhen[item.id],
+  }));
+}
+for (const item of questions) item.showWhen = defaultShowWhen[item.id];
+export const privacy =
+  '수집 항목: 성함 또는 닉네임, 휴대전화 번호\n수집 목적: 인터뷰 참여 의사 확인 및 대상자 선정, 인터뷰 일정 안내와 진행 관련 연락, 설문 또는 인터뷰 참여 혜택 제공\n보유 및 이용 기간: 인터뷰와 참여 혜택 제공이 종료된 날로부터 90일 이내 파기합니다.\n동의하지 않을 수 있으며, 이 경우 인터뷰 대상자 선정과 참여 혜택 제공이 어려울 수 있습니다. 동의하지 않아도 설문은 제출할 수 있습니다.';
+export function visible(q: Question, a: Answers) {
+  if (!q.showWhen?.length) return true;
+  const answer = (id: string) => {
+    const value = a[id];
+    if (value === '기타 브랜드') return String(a[id + '_other'] ?? '').trim();
+    return value;
+  };
+  return q.showWhen.every((rule) => {
+    const value = answer(rule.questionId);
+    const list = Array.isArray(value) ? value : [String(value ?? '')];
+    const values = rule.values ?? [];
+    if (rule.operator === 'answered')
+      return Array.isArray(value) ? value.length > 0 : String(value ?? '').trim() !== '';
+    if (rule.operator === 'equals') return list.includes(values[0] ?? '');
+    if (rule.operator === 'not_equals') return !list.includes(values[0] ?? '');
+    if (rule.operator === 'one_of') return list.some((x) => values.includes(x));
+    if (rule.operator === 'not_one_of') return list.every((x) => !values.includes(x));
+    if (rule.operator === 'different_answer')
+      return String(value ?? '').trim() !== String(answer(rule.compareQuestionId || '') ?? '').trim();
+    return true;
+  });
 }
 export function cleanAnswers(qs: Question[], a: Answers) {
   const clean: Answers = {};

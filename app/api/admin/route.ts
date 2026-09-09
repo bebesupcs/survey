@@ -7,9 +7,17 @@ import {
   runtime,
   sameOrigin,
 } from '@/lib/server';
-import { questions } from '@/lib/survey';
+import { type Question, type VisibilityOperator } from '@/lib/survey';
 import { appsScript } from '@/lib/apps-script';
-const locked = ['Q7', 'Q10', 'Q12', 'Q14', 'Q24', 'Q26', 'Q31'];
+const types = new Set(['single', 'multi', 'text', 'phone', 'score']);
+const operators = new Set<VisibilityOperator>([
+  'equals',
+  'not_equals',
+  'one_of',
+  'not_one_of',
+  'answered',
+  'different_answer',
+]);
 export async function GET() {
   if (!(await isAdmin()))
     return Response.json(
@@ -58,7 +66,8 @@ export async function POST(r: Request) {
     if (
       data.action !== 'save' ||
       !Array.isArray(data.questions) ||
-      data.questions.length !== questions.length
+      data.questions.length < 1 ||
+      data.questions.length > 80
     )
       throw Error('문항 구성을 확인해주세요.');
     if (data.version !== c.version)
@@ -68,13 +77,20 @@ export async function POST(r: Request) {
         },
         { status: 409 },
       );
-    const updated = questions.map((original) => {
-      const edited = data.questions.find((x: any) => x.id === original.id);
+    const ids = new Set<string>();
+    const updated: Question[] = data.questions.map((edited: any) => {
       if (
         !edited ||
+        typeof edited.id !== 'string' ||
+        !/^[A-Za-z0-9_-]{1,40}$/.test(edited.id) ||
+        ids.has(edited.id) ||
         typeof edited.title !== 'string' ||
         !edited.title.trim() ||
         edited.title.length > 500 ||
+        !types.has(edited.type) ||
+        !Number.isInteger(edited.section) ||
+        edited.section < 0 ||
+        edited.section > 8 ||
         !Array.isArray(edited.options) ||
         edited.options.length > 40 ||
         edited.options.some(
@@ -82,21 +98,57 @@ export async function POST(r: Request) {
         ) ||
         new Set(edited.options).size !== edited.options.length
       )
-        throw Error(original.id + '의 질문과 선택지를 확인해주세요.');
-      if (original.options.length && edited.options.length < 2)
-        throw Error(original.id + '은 최소 두 개의 선택지가 필요합니다.');
+        throw Error((edited?.id || '문항') + '의 질문과 선택지를 확인해주세요.');
+      ids.add(edited.id);
+      if (['single', 'multi', 'score'].includes(edited.type) && edited.options.length < 2)
+        throw Error(edited.id + '은 최소 두 개의 선택지가 필요합니다.');
+      if (['text', 'phone'].includes(edited.type) && edited.options.length)
+        throw Error(edited.id + '의 답변 방식과 선택지를 확인해주세요.');
+      const showWhen = Array.isArray(edited.showWhen) ? edited.showWhen : [];
+      if (
+        showWhen.length > 8 ||
+        showWhen.some(
+          (rule: any) =>
+            !rule ||
+            typeof rule.questionId !== 'string' ||
+            !operators.has(rule.operator) ||
+            (rule.values !== undefined &&
+              (!Array.isArray(rule.values) ||
+                rule.values.some((v: any) => typeof v !== 'string'))) ||
+            (rule.operator === 'different_answer' &&
+              typeof rule.compareQuestionId !== 'string'),
+        )
+      )
+        throw Error(edited.id + '의 노출 조건을 확인해주세요.');
       return {
-        ...original,
+        id: edited.id,
         title: edited.title.trim(),
-        options:
-          locked.includes(original.id) || original.type === 'score'
-            ? original.options
-            : edited.options,
-        required: ['Q29', 'Q30', 'Q31'].includes(original.id)
-          ? true
-          : !!edited.required,
+        section: edited.section,
+        type: edited.type,
+        required: !!edited.required,
+        options: edited.options,
+        max:
+          edited.type === 'multi' && Number.isInteger(edited.max) && edited.max > 0
+            ? edited.max
+            : undefined,
+        hint:
+          typeof edited.hint === 'string' && edited.hint.trim()
+            ? edited.hint.trim()
+            : undefined,
+        showWhen,
       };
     });
+    const positions = new Map(updated.map((item, i) => [item.id, i]));
+    for (const item of updated) {
+      for (const rule of item.showWhen ?? []) {
+        if (!ids.has(rule.questionId) || rule.questionId === item.id)
+          throw Error(item.id + '의 조건 질문을 확인해주세요.');
+        if (rule.compareQuestionId && !ids.has(rule.compareQuestionId))
+          throw Error(item.id + '의 비교 질문을 확인해주세요.');
+        if ((positions.get(rule.questionId) ?? 999) >= (positions.get(item.id) ?? -1))
+          throw Error(item.id + '의 조건 질문은 이 문항보다 위에 있어야 합니다.');
+      }
+    }
     const version = crypto.randomUUID();
     await db().batch([
       db()

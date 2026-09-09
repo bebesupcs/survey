@@ -436,7 +436,7 @@ export default function Home() {
       </main>
       <footer>
         베베숲 · 고객님의 경험이 더 나은 제품과 서비스를 만듭니다.　
-        <a href="/admin">설문 관리</a>
+        <a href="/bebesupcxadmin">설문 관리</a>
       </footer>
     </>
   );
