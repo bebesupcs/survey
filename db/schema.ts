@@ -10,3 +10,10 @@ export const settings = sqliteTable('survey_settings', {
   endpoint: text('endpoint').notNull(),
   ready: integer('ready').notNull().default(0),
 });
+
+export const adminAccess = sqliteTable('admin_access', {
+  email: text('email').primaryKey(),
+  enabled: integer('enabled').notNull(),
+  updatedAt: text('updated_at').notNull(),
+  updatedBy: text('updated_by').notNull(),
+});

@@ -41,3 +41,16 @@ for(const value of ['0101234567','010123456789','0212345678','010abcd5678','+821
 assert.equal(formatPhoneNumber('0111234567'),'011-123-4567');
 assert.equal(formatPhoneNumber(''),'');assert.equal(formatPhoneNumber('010123'),'010123');
 console.log('PASS: phone normalization, hyphenated input, spaces, invalid length/prefix/letters and partial input.');
+import {hasAdminAccess,normalizeEmail,validEmail} from './lib/admin-access.ts';
+assert.equal(normalizeEmail(' BEBESUPCS@GMAIL.COM '),'bebesupcs@gmail.com');
+assert.equal(validEmail('not-an-email'),false);
+assert.equal(hasAdminAccess('owner@example.com','owner@example.com',[],0),true);
+assert.equal(hasAdminAccess('bebesupcs@gmail.com','owner@example.com',['bebesupcs@gmail.com'],null),true);
+assert.equal(hasAdminAccess('bebesupcs@gmail.com','owner@example.com',['bebesupcs@gmail.com'],0),false);
+assert.equal(hasAdminAccess('new@example.com','owner@example.com',[],1),true);
+assert.equal(hasAdminAccess('stranger@example.com','owner@example.com',[],null),false);
+assert.equal(hasAdminAccess('','owner@example.com',[],null),false);
+let scheduled;
+context.ScriptApp={newTrigger:name=>{assert.equal(name,'deleteInterviewContacts');return {timeBased:()=>({at:date=>({create:()=>{scheduled=date;}})})}}};
+const expected=new Date();expected.setDate(expected.getDate()+90);context.scheduleContactDeletion();assert.ok(Math.abs(scheduled.getTime()-expected.getTime())<2000);
+console.log('PASS: owner protection, initial admin, revocation override, new grants, strangers and 90-day scheduling.');

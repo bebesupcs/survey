@@ -28,8 +28,8 @@ const row=headers.map(h=>safe(values[h]??''));sheet.getRange(sheet.getLastRow()+
 return json({ok:true,id:data.id});
 }catch(err){return json({ok:false});}finally{if(lock&&lock.hasLock())lock.releaseLock();}}
 // 인터뷰와 혜택 제공이 종료되면 아래 함수를 실행해 연락처 보유 종료를 예약하세요.
-// 30일 이내 파기 안내에 맞춰 종료일부터 29일 뒤 연락처와 이름을 삭제합니다.
-function scheduleContactDeletion(){const end=new Date();end.setDate(end.getDate()+29);ScriptApp.newTrigger('deleteInterviewContacts').timeBased().at(end).create();}
+// 90일 이내 파기 안내에 맞춰 종료일부터 90일 뒤 연락처와 이름을 삭제합니다.
+function scheduleContactDeletion(){const end=new Date();end.setDate(end.getDate()+90);ScriptApp.newTrigger('deleteInterviewContacts').timeBased().at(end).create();}
 function deleteInterviewContacts(){const sheet=SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(RESPONSE_SHEET);if(!sheet||sheet.getLastRow()<2)return;const headers=sheet.getRange(1,1,1,sheet.getLastColumn()).getValues()[0];for(const key of ['Q29','Q30']){const col=headers.indexOf(key);if(col>=0)sheet.getRange(2,col+1,sheet.getLastRow()-1,1).clearContent();}}
 `;
 }

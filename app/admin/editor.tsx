@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { type Question, sections } from '@/lib/survey';
+import Accounts from './accounts';
 const locked = ['Q7', 'Q10', 'Q12', 'Q14', 'Q24', 'Q26', 'Q31', 'Q22'];
 export default function Editor() {
   const [qs, setQs] = useState<Question[]>([]),
@@ -78,7 +79,12 @@ export default function Editor() {
     <>
       <header className="topbar">
         <a className="brand" href="/">
-          <img src="/bebesup-logo.png" alt="베베숲 Bebesup" className="brand-logo" /><span>설문 관리</span>
+          <img
+            src="/bebesup-logo.png"
+            alt="베베숲 Bebesup"
+            className="brand-logo"
+          />
+          <span>설문 관리</span>
         </a>
         <a href="/" target="_blank" rel="noreferrer">
           설문 미리보기 ↗
@@ -92,6 +98,7 @@ export default function Editor() {
             {message}
           </p>
         )}
+        <Accounts />
         <section>
           <h2>구글 스프레드시트 연결</h2>
           <p className="notice">
@@ -198,9 +205,25 @@ export default function Editor() {
           </div>
           <p className="muted">
             인터뷰와 혜택 제공이 종료되면 Apps Script에서
-            scheduleContactDeletion을 한 번 실행하세요. 29일 후 이름과 연락처를
+            scheduleContactDeletion을 한 번 실행하세요. 90일 후 이름과 연락처를
             삭제합니다. 내려받은 사본은 별도로 삭제해주세요.
           </p>
+          <details>
+            <summary>기존 Apps Script의 90일 예약 적용 방법</summary>
+            <p>
+              이미 연결한 Apps Script에서는 기존 scheduleContactDeletion 함수만{' '}
+              <a href="/retention-90-days.txt" target="_blank" rel="noreferrer">
+                90일 예약 코드
+              </a>
+              로 교체하고 저장해주세요. 예약 시점은 함수를 실행한 날을 기준으로
+              합니다.
+            </p>
+            <p>
+              이미 예약된 29일 삭제 트리거는 그대로 유지됩니다. 변경이 필요한
+              경우 Google Apps Script의 트리거 화면에서 기존 예약을
+              확인해주세요. 기존 응답에 안내한 보유 기간은 별도로 관리해주세요.
+            </p>
+          </details>
         </section>
         <section>
           <div className="row">

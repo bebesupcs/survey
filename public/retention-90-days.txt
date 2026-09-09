@@ -1,0 +1,8 @@
+// 기존 scheduleContactDeletion 함수를 이 함수로 교체하고 저장하세요.
+// 이 함수를 새로 실행한 시점으로부터 90일 뒤 삭제를 예약합니다.
+// 이미 예약한 트리거의 실행 시점은 자동 변경되지 않습니다.
+function scheduleContactDeletion() {
+  const end = new Date();
+  end.setDate(end.getDate() + 90);
+  ScriptApp.newTrigger('deleteInterviewContacts').timeBased().at(end).create();
+}

@@ -1,10 +1,12 @@
 import { env } from 'cloudflare:workers';
 import { getChatGPTUser } from '@/app/chatgpt-auth';
 import { questions, type Question } from './survey';
+import { normalizeEmail, hasAdminAccess } from './admin-access';
 export const runtime = () =>
   env as unknown as {
     DB: D1Database;
     ADMIN_EMAIL?: string;
+    INITIAL_ADMIN_EMAILS?: string;
     GOOGLE_BRIDGE_SECRET?: string;
   };
 export const db = () => runtime().DB;
@@ -29,13 +31,44 @@ export async function getQuestions(
     .first<{ questions: string }>();
   return row ? JSON.parse(row.questions) : null;
 }
-export async function isAdmin() {
+export const ownerEmail = () => normalizeEmail(runtime().ADMIN_EMAIL || '');
+export const initialAdminEmails = () =>
+  (runtime().INITIAL_ADMIN_EMAILS || '')
+    .split(',')
+    .map(normalizeEmail)
+    .filter(Boolean);
+export async function isOwner() {
   const user = await getChatGPTUser();
   return (
-    !!user &&
-    !!runtime().ADMIN_EMAIL &&
-    user.email.toLowerCase() === runtime().ADMIN_EMAIL!.toLowerCase()
+    !!user && !!ownerEmail() && normalizeEmail(user.email) === ownerEmail()
   );
+}
+export async function isAdmin() {
+  const user = await getChatGPTUser();
+  if (!user) return false;
+  const email = normalizeEmail(user.email);
+  if (email === ownerEmail()) return true;
+  const row = await db()
+    .prepare('SELECT enabled FROM admin_access WHERE email=?')
+    .bind(email)
+    .first<{ enabled: number }>();
+  return hasAdminAccess(
+    email,
+    ownerEmail(),
+    initialAdminEmails(),
+    row?.enabled ?? null,
+  );
+}
+export async function listAdmins() {
+  const rows = await db()
+    .prepare('SELECT email,enabled FROM admin_access ORDER BY email')
+    .all<{ email: string; enabled: number }>();
+  const map = new Map(initialAdminEmails().map((email) => [email, true]));
+  for (const row of rows.results) map.set(row.email, !!row.enabled);
+  map.set(ownerEmail(), true);
+  return [...map]
+    .filter(([, enabled]) => enabled)
+    .map(([email]) => ({ email, owner: email === ownerEmail() }));
 }
 export function sameOrigin(request: Request) {
   return request.headers.get('origin') === new URL(request.url).origin;
