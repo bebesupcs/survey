@@ -23,6 +23,8 @@ const operators = new Set<VisibilityOperator>([
   'different_answer',
 ]);
 const SPREADSHEET_ID = '1chXyMf9FfRXaO4LZIzB2Vj4K89MuwzSvilsOHOMX82s';
+const LEGACY_PING_ENDPOINT =
+  'https://script.google.com/macros/s/AKfycbzRi-LZcXlrzGYtUaSzfOvYNwbSDku7kphfKX7smZXotDkEUhv_yFaB4v5NwaGfsqt-/exec';
 type ConnectionStatus = {
   state: 'connected' | 'disconnected';
   message: string;
@@ -37,7 +39,13 @@ async function checkConnection(endpoint: string): Promise<ConnectionStatus> {
   const checkedAt = new Date().toISOString();
   try {
     const result = await bridge(endpoint, { action: 'ping' });
-    if (result.spreadsheetId !== SPREADSHEET_ID)
+    if (
+      result.spreadsheetId !== SPREADSHEET_ID &&
+      !(
+        result.spreadsheetId === undefined &&
+        endpoint === LEGACY_PING_ENDPOINT
+      )
+    )
       return {
         state: 'disconnected',
         message: '연결된 Google Sheets가 응답 저장용 시트와 다릅니다.',
