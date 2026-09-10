@@ -5,6 +5,24 @@ import { type Question, type VisibilityOperator, sections } from '@/lib/survey';
 import Accounts from './accounts';
 import MediaManager from './media-manager';
 
+type ConnectionInfo = {
+  state: 'checking' | 'connected' | 'disconnected' | 'unverified';
+  message: string;
+  checkedAt?: string;
+};
+const formatCheckedAt = (value?: string) =>
+  value
+    ? new Date(value).toLocaleString('ko-KR', {
+        timeZone: 'Asia/Seoul',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      })
+    : '';
+
 const operatorLabels: Record<VisibilityOperator, string> = {
   equals: '이 답변일 때 표시',
   not_equals: '이 답변이 아닐 때 표시',
@@ -20,6 +38,11 @@ export default function Editor() {
     [endpoint, setEndpoint] = useState(''),
     [script, setScript] = useState(''),
     [ready, setReady] = useState(false),
+    [savedEndpoint, setSavedEndpoint] = useState(''),
+    [connection, setConnection] = useState<ConnectionInfo>({
+      state: 'checking',
+      message: '연결 확인 중...',
+    }),
     [busy, setBusy] = useState(false),
     [message, setMessage] = useState(''),
     [dirty, setDirty] = useState(false);
@@ -28,11 +51,14 @@ export default function Editor() {
       const r = await fetch('/api/admin'),
         d: any = await r.json();
       if (!r.ok) throw Error(d.error);
+      if (d.connection) setConnection(d.connection);
       setQs(d.questions);
       setVersion(d.version);
       setEndpoint(d.endpoint);
+      setSavedEndpoint(d.endpoint);
       setScript(d.script);
       setReady(!!d.ready);
+      setConnection(d.connection);
     } catch (e) {
       setMessage(String(e));
     }
@@ -59,6 +85,7 @@ export default function Editor() {
       });
       const d: any = await r.json();
       if (!r.ok) throw Error(d.error);
+      if (d.connection) setConnection(d.connection);
       if (action === 'save') {
         setVersion(d.version);
         setDirty(false);
@@ -76,7 +103,16 @@ export default function Editor() {
         );
       }
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : '처리하지 못했습니다.');
+      const reason = e instanceof Error ? e.message : '처리하지 못했습니다.';
+      if (action === 'connect' || action === 'analysis') {
+        setConnection({
+          state: 'disconnected',
+          message: reason,
+          checkedAt: new Date().toISOString(),
+        });
+        if (action === 'connect') setReady(false);
+      }
+      setMessage(reason);
     } finally {
       setBusy(false);
     }
@@ -169,9 +205,29 @@ export default function Editor() {
         <MediaManager />
         <section>
           <h2>구글 스프레드시트 연결</h2>
-          <p className="notice">
-            {ready ? '연결 완료 · 응답 접수 중' : '연결 대기 · 응답 접수 전'}
-          </p>
+          <div className="connection-status" data-state={connection.state}>
+            <strong>[Google Sheets 연결 상태]</strong>
+            <span className="connection-state">
+              {connection.state === 'checking'
+                ? '연결 확인 중...'
+                : connection.state === 'connected'
+                  ? '🟢 연결됨'
+                  : connection.state === 'unverified'
+                    ? '🟠 확인 필요'
+                    : '🔴 연결되지 않음'}
+            </span>
+            <span>{connection.message}</span>
+            {connection.checkedAt && (
+              <small>
+                마지막 확인: {formatCheckedAt(connection.checkedAt)}
+              </small>
+            )}
+            {connection.state === 'connected' && (
+              <small>
+                {ready ? '현재 설문 응답 접수 중' : '현재 설문 응답 접수 중지'}
+              </small>
+            )}
+          </div>
           <p>
             <a
               href="https://docs.google.com/spreadsheets/d/1chXyMf9FfRXaO4LZIzB2Vj4K89MuwzSvilsOHOMX82s/edit?gid=1519874531"
@@ -237,7 +293,16 @@ export default function Editor() {
               type="url"
               placeholder="https://script.google.com/macros/s/…/exec"
               value={endpoint}
-              onChange={(e) => setEndpoint(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                setEndpoint(value);
+                if (value !== savedEndpoint)
+                  setConnection({
+                    state: 'unverified',
+                    message:
+                      '변경한 URL은 아직 실제 연결을 확인하지 않았습니다.',
+                  });
+              }}
             />
           </label>
           <div className="row">
@@ -259,7 +324,7 @@ export default function Editor() {
             )}
             <button
               className="secondary"
-              disabled={busy || !ready}
+              disabled={busy || connection.state !== 'connected'}
               onClick={() => act('analysis')}
             >
               분석 시트 만들기/새로고침

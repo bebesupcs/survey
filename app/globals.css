@@ -573,3 +573,33 @@ footer {
     max-height: 210px;
   }
 }
+
+.connection-status {
+  display: grid;
+  gap: 6px;
+  margin: 14px 0 18px;
+  padding: 16px 18px;
+  border: 1px solid #d7e2de;
+  border-radius: 10px;
+  background: #f7faf9;
+}
+.connection-status[data-state='connected'] {
+  border-color: #8fc9b8;
+  background: #edf8f4;
+}
+.connection-status[data-state='disconnected'] {
+  border-color: #e3b0aa;
+  background: #fff5f3;
+}
+.connection-status[data-state='checking'],
+.connection-status[data-state='unverified'] {
+  border-color: #e2c98f;
+  background: #fffaf0;
+}
+.connection-state {
+  font-size: 18px;
+  font-weight: 700;
+}
+.connection-status small {
+  color: #667a73;
+}

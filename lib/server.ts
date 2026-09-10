@@ -97,7 +97,12 @@ export async function bridge(endpoint: string, payload: object) {
     redirect: 'follow',
     signal: AbortSignal.timeout(25000),
   });
-  if (!res.ok) throw Error('스프레드시트 연결에 실패했습니다.');
+  if (!res.ok)
+    throw Error(
+      'Apps Script가 HTTP ' +
+        res.status +
+        ' 오류를 반환했습니다. 웹 앱 배포와 접근 권한을 확인해주세요.',
+    );
   let data;
   try {
     data = (await res.json()) as any;
@@ -106,7 +111,9 @@ export async function bridge(endpoint: string, payload: object) {
   }
   if (!data.ok)
     throw Error(
-      '스프레드시트 저장을 확인하지 못했습니다. 잠시 후 다시 시도해주세요.',
+      typeof data.error === 'string' && data.error
+        ? data.error
+        : 'Apps Script가 요청을 처리하지 못했습니다. 연결 코드와 최신 웹 앱 배포를 확인해주세요.',
     );
   return data;
 }

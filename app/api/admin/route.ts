@@ -22,6 +22,43 @@ const operators = new Set<VisibilityOperator>([
   'answered',
   'different_answer',
 ]);
+const SPREADSHEET_ID = '1chXyMf9FfRXaO4LZIzB2Vj4K89MuwzSvilsOHOMX82s';
+type ConnectionStatus = {
+  state: 'connected' | 'disconnected';
+  message: string;
+  checkedAt?: string;
+};
+async function checkConnection(endpoint: string): Promise<ConnectionStatus> {
+  if (!endpoint)
+    return {
+      state: 'disconnected',
+      message: '저장된 Apps Script 웹 앱 URL이 없습니다.',
+    };
+  const checkedAt = new Date().toISOString();
+  try {
+    const result = await bridge(endpoint, { action: 'ping' });
+    if (result.spreadsheetId !== SPREADSHEET_ID)
+      return {
+        state: 'disconnected',
+        message: '연결된 Google Sheets가 응답 저장용 시트와 다릅니다.',
+        checkedAt,
+      };
+    return {
+      state: 'connected',
+      message: '응답 저장 가능',
+      checkedAt,
+    };
+  } catch (error) {
+    return {
+      state: 'disconnected',
+      message:
+        error instanceof Error
+          ? error.message
+          : 'Apps Script 연결을 확인하지 못했습니다.',
+      checkedAt,
+    };
+  }
+}
 export async function GET() {
   if (!(await isAdmin()))
     return Response.json(
@@ -29,11 +66,13 @@ export async function GET() {
       { status: 403 },
     );
   const c = await config();
+  const connection = await checkConnection(c.endpoint);
   return Response.json(
     {
       ...c,
       questions: await getQuestions(c.version),
       script: appsScript(runtime().GOOGLE_BRIDGE_SECRET || '연결키_설정_필요'),
+      connection,
     },
     { headers: { 'Cache-Control': 'no-store' } },
   );
@@ -50,25 +89,41 @@ export async function POST(r: Request) {
     const data = JSON.parse(text),
       c = await config();
     if (data.action === 'connect') {
-      const result = await bridge(data.endpoint, { action: 'ping' });
-      if (
-        result.spreadsheetId !== '1chXyMf9FfRXaO4LZIzB2Vj4K89MuwzSvilsOHOMX82s'
-      )
-        throw Error('저장 대상 스프레드시트가 일치하지 않습니다.');
+      const connection = await checkConnection(data.endpoint);
+      if (connection.state !== 'connected') throw Error(connection.message);
       await db()
         .prepare(
           'INSERT INTO survey_settings (id,version,endpoint,ready) VALUES (1,?,?,1) ON CONFLICT(id) DO UPDATE SET endpoint=excluded.endpoint,ready=1',
         )
         .bind(c.version, data.endpoint)
         .run();
-      return Response.json({ ok: true });
+      return Response.json({ ok: true, connection });
     }
     if (data.action === 'analysis') {
-      await bridge(c.endpoint, {
-        action: 'refreshAnalysis',
-        questions: await getQuestions(c.version),
+      try {
+        await bridge(c.endpoint, {
+          action: 'refreshAnalysis',
+          questions: await getQuestions(c.version),
+        });
+      } catch (error) {
+        const reason =
+          error instanceof Error
+            ? error.message
+            : '요청을 처리하지 못했습니다.';
+        throw Error(
+          '분석 시트 생성 실패: ' +
+            reason +
+            ' 기존 Apps Script가 최신 연결 코드로 배포되었는지 확인해주세요.',
+        );
+      }
+      return Response.json({
+        ok: true,
+        connection: {
+          state: 'connected',
+          message: '응답 저장 가능',
+          checkedAt: new Date().toISOString(),
+        },
       });
-      return Response.json({ ok: true });
     }
     if (data.action === 'pause') {
       await db().prepare('UPDATE survey_settings SET ready=0 WHERE id=1').run();
