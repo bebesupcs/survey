@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Progress } from '@/components/ui/progress';
@@ -31,8 +31,12 @@ export default function Home() {
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false),
     [done, setDone] = useState(false),
+    [completion, setCompletion] = useState({ prize: false, interview: false }),
     [id, setId] = useState(''),
-    [media, setMedia] = useState<Record<string, { url: string }>>({});
+    [media, setMedia] = useState<Record<string, { url: string }>>({}),
+    answersRef = useRef(a),
+    questionsRef = useRef(qs),
+    currentRef = useRef<typeof qs>([]);
   useEffect(() => {
     setId(crypto.randomUUID());
     fetch('/api/survey')
@@ -59,6 +63,11 @@ export default function Home() {
       (item.sections as readonly number[]).includes(step),
     ),
     customerStage = customerStages[Math.max(customerStageIndex, 0)];
+  useEffect(() => {
+    answersRef.current = a;
+    questionsRef.current = qs;
+    currentRef.current = current;
+  }, [a, qs, current]);
   const update = (key: string, value: string | string[]) => {
     setA((old) => cleanAnswers(qs, { ...old, [key]: value }));
     setError('');
@@ -89,10 +98,12 @@ export default function Home() {
                 Array.isArray(input.answers)
               )
                 throw Error('answers 객체가 필요합니다.');
-              let next = { ...a };
+              const currentQuestions = currentRef.current,
+                allQuestions = questionsRef.current;
+              let next = { ...answersRef.current };
               for (const [key, value] of Object.entries(input.answers)) {
                 if (
-                  !current.some((q) => q.id === key) ||
+                  !currentQuestions.some((q) => q.id === key) ||
                   !(
                     typeof value === 'string' ||
                     (Array.isArray(value) &&
@@ -104,8 +115,8 @@ export default function Home() {
                   );
                 next[key] = value as any;
               }
-              next = cleanAnswers(qs, next);
-              const problem = validate(current, next);
+              next = cleanAnswers(allQuestions, next);
+              const problem = validate(currentQuestions, next);
               if (problem) throw Error(problem);
               setA(next);
               return { staged: Object.keys(input.answers), submitted: false };
@@ -116,7 +127,7 @@ export default function Home() {
       ).catch(() => {});
     } catch {}
     return () => lifecycle.abort();
-  }, [a, step, qs]);
+  }, []);
   async function next() {
     const problem = validate(current, a);
     if (problem) {
@@ -146,6 +157,13 @@ export default function Home() {
       const data: any = await r.json();
       if (!r.ok)
         throw Error(data.error || '제출하지 못했습니다. 다시 시도해주세요.');
+      setCompletion({
+        prize: clean.Q28 === '네, 참여할게요',
+        interview: [
+          '네, 참여하고 싶어요',
+          '자세한 내용을 확인한 후 결정하고 싶어요',
+        ].includes(String(clean.Q31 ?? '')),
+      });
       setDone(true);
       setA({});
       window.scrollTo({ top: 0 });
@@ -223,14 +241,25 @@ export default function Home() {
           {done ? (
             <div className="success">
               <div className="eyebrow">THANK YOU</div>
-              <h2>
-                고객님의 이야기를
-                <br />잘 받았습니다.
-              </h2>
+              <h2>소중한 의견 감사합니다.</h2>
               <p>
-                소중한 의견을 들려주셔서 감사합니다.
-                <br />더 나은 제품과 서비스로 보답하겠습니다.
+                보내주신 이야기는 베베숲의 제품과 고객 경험을
+                <br />더 나아지게 만드는 데 소중히 활용하겠습니다.
+                <br />
+                <br />설문에 참여해주셔서 감사합니다.
               </p>
+              {completion.prize && (
+                <p>
+                  경품 당첨자에게는 입력해주신 연락처로 개별 안내드릴
+                  예정입니다.
+                </p>
+              )}
+              {completion.interview && (
+                <p>
+                  인터뷰 대상자로 선정된 경우 입력해주신 연락처로 별도
+                  안내드릴 예정입니다.
+                </p>
+              )}
             </div>
           ) : (
             <>
