@@ -60,32 +60,48 @@ export default function MediaManager() {
       <div className="media-grid">
         {(Object.keys(labels) as (keyof typeof labels)[]).map((slot) => (
           <article className="media-card" key={slot}>
-            <h3>{labels[slot]}</h3>
+            <div className="media-card-heading">
+              <h3>{labels[slot]}</h3>
+              <small>
+                {media[slot] ? '현재 이미지' : '등록된 이미지 없음'}
+              </small>
+            </div>
             <div className="media-preview">
               {media[slot] ? (
                 <img src={media[slot].url} alt={`${labels[slot]} 미리보기`} />
               ) : (
-                <span>등록된 이미지 없음</span>
+                <span className="media-empty">이미지를 등록해주세요.</span>
               )}
             </div>
-            <label className="secondary upload-button">
-              {busy === slot ? '처리 중…' : '이미지 선택'}
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                disabled={!!busy}
-                onChange={(e) => upload(slot, e.target.files?.[0])}
-              />
-            </label>
-            {media[slot] && (
-              <button
-                className="secondary"
-                disabled={!!busy}
-                onClick={() => remove(slot)}
-              >
-                삭제
-              </button>
-            )}
+            <div className="media-actions">
+              <label className="secondary upload-button">
+                {busy === slot
+                  ? '처리 중…'
+                  : media[slot]
+                    ? '이미지 변경'
+                    : '이미지 등록'}
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  disabled={!!busy}
+                  onChange={(e) => {
+                    const input = e.currentTarget;
+                    void upload(slot, input.files?.[0]).finally(() => {
+                      input.value = '';
+                    });
+                  }}
+                />
+              </label>
+              {media[slot] && (
+                <button
+                  className="secondary"
+                  disabled={!!busy}
+                  onClick={() => remove(slot)}
+                >
+                  이미지 삭제
+                </button>
+              )}
+            </div>
           </article>
         ))}
       </div>

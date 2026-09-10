@@ -15,6 +15,13 @@ import {
   formatPhoneNumber,
   type Answers,
 } from '@/lib/survey';
+const customerStages = [
+  { label: '나의 물티슈 사용', sections: [0] },
+  { label: '사용하는 제품', sections: [1] },
+  { label: '물티슈 선택 경험', sections: [2] },
+  { label: '베베숲 경험', sections: [3, 4, 5, 6] },
+  { label: '설문 마무리', sections: [7, 8] },
+] as const;
 export default function Home() {
   const [qs, setQs] = useState(questions),
     [version, setVersion] = useState('1'),
@@ -47,7 +54,11 @@ export default function Home() {
       .map((_, i) => i)
       .filter((i) => qs.some((q) => q.section === i && visible(q, a))),
     pos = groups.indexOf(step),
-    current = qs.filter((q) => q.section === step && visible(q, a));
+    current = qs.filter((q) => q.section === step && visible(q, a)),
+    customerStageIndex = customerStages.findIndex((item) =>
+      (item.sections as readonly number[]).includes(step),
+    ),
+    customerStage = customerStages[Math.max(customerStageIndex, 0)];
   const update = (key: string, value: string | string[]) => {
     setA((old) => cleanAnswers(qs, { ...old, [key]: value }));
     setError('');
@@ -158,42 +169,52 @@ export default function Home() {
         </a>
         <span>고객 경험 설문</span>
       </header>
-      <main
-        className={`shell ${media.background ? 'has-survey-background' : ''}`}
-        style={
-          media.background
-            ? {
-                backgroundImage: `linear-gradient(90deg, rgba(243,246,245,.96) 0%, rgba(243,246,245,.92) 38%, rgba(243,246,245,.82) 100%), url(${media.background.url})`,
-              }
-            : undefined
-        }
-      >
+      <main className="shell">
         <aside>
-          <div className="eyebrow">YOUR EXPERIENCE MATTERS</div>
-          <h1>
-            더 좋은 일상의 시작,
-            <br />
-            고객님의 이야기에서.
-          </h1>
-          <p>
-            물티슈를 고르고 사용하며 느꼈던
-            <br />
-            솔직한 경험을 들려주세요.
-          </p>
-          <div className="side-note">
-            약 5분 소요 · 모든 브랜드 사용자 참여 가능
+          <div
+            className={
+              step === 0 && media.background ? 'survey-hero-media' : undefined
+            }
+            style={
+              step === 0 && media.background
+                ? {
+                    backgroundImage:
+                      'linear-gradient(135deg, rgba(243,246,245,.94), rgba(243,246,245,.76)), url(' +
+                      media.background.url +
+                      ')',
+                  }
+                : undefined
+            }
+          >
+            <div className="eyebrow">YOUR EXPERIENCE MATTERS</div>
+            <h1>
+              더 좋은 일상의 시작,
+              <br />
+              고객님의 이야기에서.
+            </h1>
+            <p>
+              물티슈를 고르고 사용하며 느꼈던
+              <br />
+              솔직한 경험을 들려주세요.
+            </p>
+            <div className="side-note">
+              약 5분 소요 · 모든 브랜드 사용자 참여 가능
+            </div>
+            {step === 0 && media.product && (
+              <img
+                className="survey-product-image"
+                src={media.product.url}
+                alt="베베숲 제품"
+              />
+            )}
           </div>
-          {media.product && (
-            <img
-              className="survey-product-image"
-              src={media.product.url}
-              alt="베베숲 제품"
-            />
-          )}
           <ol className="steps">
-            {groups.map((s, i) => (
-              <li key={s} className={s === step ? 'active' : ''}>
-                {String(i + 1).padStart(2, '0')}　{sections[s]}
+            {customerStages.map((item, index) => (
+              <li
+                key={item.label}
+                className={index === customerStageIndex ? 'active' : ''}
+              >
+                {String(index + 1).padStart(2, '0')}　{item.label}
               </li>
             ))}
           </ol>
@@ -215,13 +236,13 @@ export default function Home() {
             <>
               <div className="section-meta">
                 <span>
-                  {String(pos + 1).padStart(2, '0')} /{' '}
-                  {String(groups.length).padStart(2, '0')}
+                  {String(customerStageIndex + 1).padStart(2, '0')} /{' '}
+                  {String(customerStages.length).padStart(2, '0')}
                 </span>
-                <span>{sections[step]}</span>
+                <span>{customerStage.label}</span>
               </div>
               <Progress
-                value={(pos / Math.max(groups.length, 1)) * 100}
+                value={(customerStageIndex / (customerStages.length - 1)) * 100}
                 aria-label="설문 진행률"
               />
               <h2>
@@ -232,7 +253,7 @@ export default function Home() {
                     어떻게 사용하고 계신가요?
                   </>
                 ) : (
-                  sections[step]
+                  customerStage.label
                 )}
               </h2>
               {step === 0 && (
