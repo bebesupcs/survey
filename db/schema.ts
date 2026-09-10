@@ -17,3 +17,10 @@ export const adminAccess = sqliteTable('admin_access', {
   updatedAt: text('updated_at').notNull(),
   updatedBy: text('updated_by').notNull(),
 });
+
+export const siteMedia = sqliteTable('site_media', {
+  slot: text('slot').primaryKey(),
+  objectKey: text('object_key').notNull(),
+  contentType: text('content_type').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});

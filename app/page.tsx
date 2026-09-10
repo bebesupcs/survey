@@ -9,23 +9,23 @@ import {
   visible,
   cleanAnswers,
   validate,
-  privacy,
+  prizePrivacy,
+  interviewPrivacy,
   isValidPhoneNumber,
   formatPhoneNumber,
   type Answers,
-  type Question,
 } from '@/lib/survey';
 export default function Home() {
   const [qs, setQs] = useState(questions),
     [version, setVersion] = useState('1'),
     [a, setA] = useState<Answers>({}),
     [step, setStep] = useState(0),
-    [ready, setReady] = useState(false),
     [loaded, setLoaded] = useState(false),
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false),
     [done, setDone] = useState(false),
-    [id, setId] = useState('');
+    [id, setId] = useState(''),
+    [media, setMedia] = useState<Record<string, { url: string }>>({});
   useEffect(() => {
     setId(crypto.randomUUID());
     fetch('/api/survey')
@@ -36,7 +36,7 @@ export default function Home() {
       .then((d: any) => {
         setQs(d.questions);
         setVersion(d.version);
-        setReady(d.ready);
+        setMedia(d.media || {});
         setLoaded(true);
       })
       .catch(() =>
@@ -150,11 +150,24 @@ export default function Home() {
     <>
       <header className="topbar">
         <a className="brand" href="/">
-          <img src="/bebesup-logo.png" alt="베베숲 Bebesup" className="brand-logo" />
+          <img
+            src="/bebesup-logo.png"
+            alt="베베숲 Bebesup"
+            className="brand-logo"
+          />
         </a>
         <span>고객 경험 설문</span>
       </header>
-      <main className="shell">
+      <main
+        className={`shell ${media.background ? 'has-survey-background' : ''}`}
+        style={
+          media.background
+            ? {
+                backgroundImage: `linear-gradient(90deg, rgba(243,246,245,.96) 0%, rgba(243,246,245,.92) 38%, rgba(243,246,245,.82) 100%), url(${media.background.url})`,
+              }
+            : undefined
+        }
+      >
         <aside>
           <div className="eyebrow">YOUR EXPERIENCE MATTERS</div>
           <h1>
@@ -170,6 +183,13 @@ export default function Home() {
           <div className="side-note">
             약 5분 소요 · 모든 브랜드 사용자 참여 가능
           </div>
+          {media.product && (
+            <img
+              className="survey-product-image"
+              src={media.product.url}
+              alt="베베숲 제품"
+            />
+          )}
           <ol className="steps">
             {groups.map((s, i) => (
               <li key={s} className={s === step ? 'active' : ''}>
@@ -218,33 +238,49 @@ export default function Home() {
               {step === 0 && (
                 <>
                   <p className="muted">
-                    안녕하세요, 베베숲입니다. 현재 다른 브랜드를 사용하셔도
-                    참여하실 수 있습니다. 보내주신 의견은 제품과 서비스 개선에
-                    활용됩니다.
+                    안녕하세요, 베베숲입니다. 현재 베베숲을 사용하지 않거나 다른
+                    브랜드를 사용하고 계셔도 참여하실 수 있습니다. 정답은
+                    없습니다. 평소 경험과 가장 가까운 답변을 편하게
+                    선택해주세요.
                   </p>
-                  {loaded && !ready && (
-                    <p className="notice">
-                      현재 설문을 준비 중입니다. 질문을 미리 살펴보실 수 있으며,
-                      응답 접수는 연결 완료 후 시작됩니다.
+                  <div className="benefit-card">
+                    <strong>🎁 설문 참여 혜택</strong>
+                    <p>
+                      설문 참여자 중 50명을 추첨해 경품을 드립니다. 당첨자에게는
+                      입력하신 연락처로 개별 안내드립니다.
                     </p>
-                  )}
+                    <span>예상 소요 시간 약 5분</span>
+                  </div>
                 </>
               )}
               {step === 7 && (
                 <div className="notice">
-                  <strong>조금 더 자세한 이야기를 듣고 싶어요</strong>
+                  <strong>🎁 설문에 참여해주셔서 감사합니다</strong>
                   <p>
-                    물티슈를 선택하고 비교한 과정, 사용 중 만족하거나 불편했던
-                    점을 편하게 이야기해주세요. 모든 브랜드 사용자가 신청할 수
-                    있습니다.
+                    설문에 참여해주신 분 중 50명을 추첨해 경품을 드립니다. 경품
+                    추첨을 원하실 때만 연락처를 입력합니다.
                   </p>
-                  • 약 20~30분 · 전화 또는 화상 인터뷰
-                  <br />• 다양한 사용 경험을 고려해 개별 선정
-                  <br />• 인터뷰 완료자에게 별도 사례 제공
-                  <p>참여하지 않으셔도 설문은 정상적으로 제출됩니다.</p>
+                  {a.Q28 === '네, 참여할게요' && (
+                    <div className="privacy-copy">{prizePrivacy}</div>
+                  )}
                 </div>
               )}
-              {step === 8 && <div className="notice">{privacy}</div>}
+              {step === 8 && (
+                <div className="notice">
+                  <strong>조금 더 자세한 이야기를 들려주실 수 있나요?</strong>
+                  <p>
+                    약 20~30분 동안 전화 또는 화상으로 이야기하며, 인터뷰 완료
+                    시 별도 사례를 드립니다. 인터뷰 참여 여부는 설문 경품 추첨과
+                    관계없습니다.
+                  </p>
+                  {[
+                    '네, 참여하고 싶어요',
+                    '자세한 내용을 확인한 후 결정하고 싶어요',
+                  ].includes(String(a.Q31 ?? '')) && (
+                    <div className="privacy-copy">{interviewPrivacy}</div>
+                  )}
+                </div>
+              )}
               {current.map((q) => {
                 const v = a[q.id],
                   multiple = q.type === 'multi',
@@ -382,20 +418,9 @@ export default function Home() {
                   </fieldset>
                 );
               })}
-              {step === 8 && a.Q31 === '동의하지 않습니다' && (
-                <p className="notice">
-                  연락처를 수집하지 않고 설문 응답만 제출합니다.
-                </p>
-              )}
               {error && (
                 <p role="alert" className="error">
                   {error}
-                </p>
-              )}
-              {loaded && !ready && pos === groups.length - 1 && (
-                <p className="notice" role="status">
-                  현재 검토용 설문으로, 응답 접수가 시작되지 않았습니다. 입력한
-                  답변은 아직 제출되지 않았습니다.
                 </p>
               )}
               <div className="navigation">
@@ -412,17 +437,13 @@ export default function Home() {
                 </button>
                 <button
                   className="primary"
-                  disabled={
-                    busy || !loaded || (pos === groups.length - 1 && !ready)
-                  }
+                  disabled={busy || !loaded}
                   onClick={next}
                 >
                   {busy
                     ? '제출 중…'
                     : pos === groups.length - 1
-                      ? ready
-                        ? '설문 제출하기'
-                        : '응답 접수 준비 중'
+                      ? '설문 제출하기'
                       : '다음으로 →'}
                 </button>
               </div>

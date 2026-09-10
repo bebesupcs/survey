@@ -15,6 +15,13 @@
       "when": 1788913026786,
       "tag": "0001_friendly_randall_flagg",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1789003824489,
+      "tag": "0002_yielding_firebird",
+      "breakpoints": true
     }
   ]
 }

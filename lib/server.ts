@@ -1,30 +1,38 @@
 import { env } from 'cloudflare:workers';
 import { getChatGPTUser } from '@/app/chatgpt-auth';
-import { questions, hydrateQuestions, type Question } from './survey';
+import {
+  CURRENT_SURVEY_VERSION,
+  questions,
+  hydrateQuestions,
+  type Question,
+} from './survey';
 import { normalizeEmail, hasAdminAccess } from './admin-access';
 export const runtime = () =>
   env as unknown as {
     DB: D1Database;
+    MEDIA: R2Bucket;
     ADMIN_EMAIL?: string;
     INITIAL_ADMIN_EMAILS?: string;
     GOOGLE_BRIDGE_SECRET?: string;
   };
 export const db = () => runtime().DB;
 export async function config() {
-  return (
-    (await db()
-      .prepare('SELECT * FROM survey_settings WHERE id=1')
-      .first<{ version: string; endpoint: string; ready: number }>()) ?? {
-      version: '1',
-      endpoint: '',
-      ready: 0,
-    }
-  );
+  const value = (await db()
+    .prepare('SELECT * FROM survey_settings WHERE id=1')
+    .first<{ version: string; endpoint: string; ready: number }>()) ?? {
+    version: CURRENT_SURVEY_VERSION,
+    endpoint: '',
+    ready: 0,
+  };
+  const isCurrent =
+    value.version === CURRENT_SURVEY_VERSION ||
+    value.version.startsWith(CURRENT_SURVEY_VERSION + ':');
+  return isCurrent ? value : { ...value, version: CURRENT_SURVEY_VERSION };
 }
 export async function getQuestions(
   version: string,
 ): Promise<Question[] | null> {
-  if (version === '1') return questions;
+  if (version === '1' || version === CURRENT_SURVEY_VERSION) return questions;
   const row = await db()
     .prepare('SELECT questions FROM survey_versions WHERE id=?')
     .bind(version)

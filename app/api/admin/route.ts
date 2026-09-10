@@ -7,7 +7,11 @@ import {
   runtime,
   sameOrigin,
 } from '@/lib/server';
-import { type Question, type VisibilityOperator } from '@/lib/survey';
+import {
+  CURRENT_SURVEY_VERSION,
+  type Question,
+  type VisibilityOperator,
+} from '@/lib/survey';
 import { appsScript } from '@/lib/apps-script';
 const types = new Set(['single', 'multi', 'text', 'phone', 'score']);
 const operators = new Set<VisibilityOperator>([
@@ -59,6 +63,13 @@ export async function POST(r: Request) {
         .run();
       return Response.json({ ok: true });
     }
+    if (data.action === 'analysis') {
+      await bridge(c.endpoint, {
+        action: 'refreshAnalysis',
+        questions: await getQuestions(c.version),
+      });
+      return Response.json({ ok: true });
+    }
     if (data.action === 'pause') {
       await db().prepare('UPDATE survey_settings SET ready=0 WHERE id=1').run();
       return Response.json({ ok: true });
@@ -98,9 +109,14 @@ export async function POST(r: Request) {
         ) ||
         new Set(edited.options).size !== edited.options.length
       )
-        throw Error((edited?.id || '문항') + '의 질문과 선택지를 확인해주세요.');
+        throw Error(
+          (edited?.id || '문항') + '의 질문과 선택지를 확인해주세요.',
+        );
       ids.add(edited.id);
-      if (['single', 'multi', 'score'].includes(edited.type) && edited.options.length < 2)
+      if (
+        ['single', 'multi', 'score'].includes(edited.type) &&
+        edited.options.length < 2
+      )
         throw Error(edited.id + '은 최소 두 개의 선택지가 필요합니다.');
       if (['text', 'phone'].includes(edited.type) && edited.options.length)
         throw Error(edited.id + '의 답변 방식과 선택지를 확인해주세요.');
@@ -128,7 +144,9 @@ export async function POST(r: Request) {
         required: !!edited.required,
         options: edited.options,
         max:
-          edited.type === 'multi' && Number.isInteger(edited.max) && edited.max > 0
+          edited.type === 'multi' &&
+          Number.isInteger(edited.max) &&
+          edited.max > 0
             ? edited.max
             : undefined,
         hint:
@@ -145,11 +163,16 @@ export async function POST(r: Request) {
           throw Error(item.id + '의 조건 질문을 확인해주세요.');
         if (rule.compareQuestionId && !ids.has(rule.compareQuestionId))
           throw Error(item.id + '의 비교 질문을 확인해주세요.');
-        if ((positions.get(rule.questionId) ?? 999) >= (positions.get(item.id) ?? -1))
-          throw Error(item.id + '의 조건 질문은 이 문항보다 위에 있어야 합니다.');
+        if (
+          (positions.get(rule.questionId) ?? 999) >=
+          (positions.get(item.id) ?? -1)
+        )
+          throw Error(
+            item.id + '의 조건 질문은 이 문항보다 위에 있어야 합니다.',
+          );
       }
     }
-    const version = crypto.randomUUID();
+    const version = CURRENT_SURVEY_VERSION + ':' + crypto.randomUUID();
     await db().batch([
       db()
         .prepare(

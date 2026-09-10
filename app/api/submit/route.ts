@@ -29,12 +29,13 @@ export async function POST(r: Request) {
     const answers = cleanAnswers(qs, body.answers),
       error = validate(qs, answers);
     if (error) return Response.json({ error }, { status: 400 });
-    if (typeof answers.Q30 === 'string')
-      answers.Q30 = formatPhoneNumber(answers.Q30);
+    for (const id of ['Q29', 'Q35'])
+      if (typeof answers[id] === 'string')
+        answers[id] = formatPhoneNumber(answers[id] as string);
     const c = await config();
     if (!c.ready)
       return Response.json(
-        { error: '아직 응답 접수가 시작되지 않았습니다.' },
+        { error: '현재 설문을 제출할 수 없습니다. 잠시 후 다시 시도해주세요.' },
         { status: 503 },
       );
     await bridge(c.endpoint, {
