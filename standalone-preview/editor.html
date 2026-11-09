@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>베베숲 설문 비주얼 에디터 (No-Code Editor)</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    :root {
+      --primary: #087768;
+      --primary-hover: #065e52;
+      --primary-light: #edf7f3;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen pb-20">
+
+  <!-- 상단 고정 헤더 -->
+  <header class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <span class="text-2xl font-black text-[#087768] tracking-tight">Bebesup</span>
+      <span class="text-sm font-bold bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-md">설문 전용 편집기</span>
+    </div>
+    <div class="flex items-center gap-3">
+      <a href="./index.html" target="_blank" class="px-4 py-2 text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition flex items-center gap-1.5">
+        <span>👀 설문 미리보기</span>
+      </a>
+      <button id="download-file-btn" class="px-5 py-2 text-sm font-bold text-white bg-[#087768] hover:bg-[#065e52] rounded-lg shadow-sm transition flex items-center gap-1.5">
+        <span>💾 변경사항 파일로 다운로드</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- 메인 편집 컨테이너 -->
+  <main class="max-w-4xl mx-auto px-4 pt-8">
+
+    <!-- 상단 안내 알림 -->
+    <div class="mb-8 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-900 flex items-start gap-3">
+      <span class="text-2xl">✏️</span>
+      <div class="text-sm">
+        <strong class="font-bold block mb-0.5">코인/토큰 없이 마음껏 수정하세요!</strong>
+        여기서 질문 제목, 선택지 추가/삭제, 경품 혜택 등을 직접 타이핑하여 수정하신 후 우측 상단의 <strong>[💾 변경사항 파일로 다운로드]</strong>를 누르시면 <code>questions-data.js</code> 파일이 다운로드됩니다.
+      </div>
+    </div>
+
+    <!-- 1. 공통 혜택 및 문구 설정 -->
+    <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm mb-8">
+      <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+        <span class="text-emerald-700">🎁</span> 공통 리워드 & 안내 문구
+      </h2>
+      <div class="grid gap-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1.5">1:1 심층 인터뷰 참여 혜택 (상품명)</label>
+          <input type="text" id="global-reward-input" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm font-medium focus:border-[#087768] outline-none" value="시그니처 블랙 20팩 & 홈&스킨 선물박스" />
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. 문항 리스트 편집 영역 -->
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+        <span class="text-emerald-700">📋</span> 전체 설문 문항 편집
+      </h2>
+      <span class="text-xs text-slate-500 font-medium" id="question-count-badge">총 26개 문항</span>
+    </div>
+
+    <div id="questions-editor-list" class="space-y-6">
+      <!-- JavaScript로 동적 렌더링 -->
+    </div>
+
+    <!-- 하단 저장 플로팅 바 -->
+    <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900/90 text-white backdrop-blur-md px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-4">
+      <span class="text-xs text-slate-300">수정을 마쳤다면?</span>
+      <button id="floating-download-btn" class="px-4 py-1.5 text-xs font-bold bg-[#087768] hover:bg-emerald-600 rounded-full transition shadow">
+        📥 questions-data.js 다운로드
+      </button>
+    </div>
+
+  </main>
+
+  <!-- 원본 데이터 로드 -->
+  <script src="./questions-data.js"></script>
+
+  <script>
+    // 복사본 데이터 상태 관리
+    let editorQuestions = JSON.parse(JSON.stringify(SURVEY_QUESTIONS));
+
+    const container = document.getElementById("questions-editor-list");
+
+    function renderEditor() {
+      container.innerHTML = "";
+      document.getElementById("question-count-badge").textContent = `총 ${editorQuestions.length}개 문항`;
+
+      editorQuestions.forEach((q, qIdx) => {
+        const card = document.createElement("div");
+        card.className = "bg-white border border-slate-200 rounded-2xl p-6 shadow-sm";
+
+        let optionsHtml = "";
+        if (q.options && q.options.length > 0) {
+          optionsHtml = `
+            <div class="mt-4 pt-4 border-t border-slate-100">
+              <div class="flex items-center justify-between mb-2">
+                <label class="text-xs font-bold text-slate-600">선택지 목록 (보기)</label>
+                <button type="button" class="text-xs font-semibold text-[#087768] hover:underline" onclick="addOption(${qIdx})">+ 선택지 추가</button>
+              </div>
+              <div class="space-y-2">
+                ${q.options.map((opt, optIdx) => `
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs text-slate-400 font-mono w-5">${optIdx + 1}.</span>
+                    <input type="text" class="flex-1 p-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-[#087768]" value="${opt.replace(/"/g, '&quot;')}" oninput="updateOption(${qIdx}, ${optIdx}, this.value)" />
+                    <button type="button" class="text-slate-400 hover:text-red-500 p-1.5 text-sm" onclick="removeOption(${qIdx}, ${optIdx})">✕</button>
+                  </div>
+                `).join("")}
+              </div>
+            </div>
+          `;
+        }
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 font-black text-xs rounded">${q.id}</span>
+              <span class="text-xs font-semibold text-slate-400">[유형: ${q.type}]</span>
+            </div>
+            <label class="flex items-center gap-1.5 text-xs text-slate-600 font-medium cursor-pointer">
+              <input type="checkbox" ${q.required ? "checked" : ""} class="accent-[#087768] rounded" onchange="toggleRequired(${qIdx}, this.checked)" />
+              필수 응답
+            </label>
+          </div>
+
+          <div class="grid gap-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">질문 제목</label>
+              <textarea class="w-full p-2.5 border border-slate-200 rounded-lg text-sm font-semibold outline-none focus:border-[#087768] min-h-[50px]" oninput="updateTitle(${qIdx}, this.value)">${q.title}</textarea>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">하단 힌트 / 보충 안내문 (선택사항)</label>
+              <input type="text" class="w-full p-2 border border-slate-200 rounded-lg text-xs text-slate-600 outline-none focus:border-[#087768]" value="${(q.hint || '').replace(/"/g, '&quot;')}" placeholder="힌트가 없으면 비워두세요" oninput="updateHint(${qIdx}, this.value)" />
+            </div>
+
+            ${q.type === 'multi' ? `
+              <div class="flex items-center gap-3">
+                <label class="text-xs font-bold text-slate-600">최대 선택 가능 개수:</label>
+                <input type="number" min="1" max="10" class="w-20 p-1.5 border border-slate-200 rounded-lg text-xs outline-none focus:border-[#087768]" value="${q.max || ''}" placeholder="무제한" oninput="updateMax(${qIdx}, this.value)" />
+                <span class="text-xs text-slate-400">비워두면 무제한 복수 선택</span>
+              </div>
+            ` : ''}
+
+            ${optionsHtml}
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
+    // 변경 헬퍼 함수들
+    window.updateTitle = (idx, val) => { editorQuestions[idx].title = val; };
+    window.updateHint = (idx, val) => { editorQuestions[idx].hint = val; };
+    window.updateMax = (idx, val) => { editorQuestions[idx].max = val ? parseInt(val, 10) : undefined; };
+    window.toggleRequired = (idx, checked) => { editorQuestions[idx].required = checked; };
+    window.updateOption = (qIdx, optIdx, val) => { editorQuestions[qIdx].options[optIdx] = val; };
+    window.removeOption = (qIdx, optIdx) => {
+      editorQuestions[qIdx].options.splice(optIdx, 1);
+      renderEditor();
+    };
+    window.addOption = (qIdx) => {
+      if (!editorQuestions[qIdx].options) editorQuestions[qIdx].options = [];
+      editorQuestions[qIdx].options.push("새 선택지");
+      renderEditor();
+    };
+
+    // 파일 다운로드 생성
+    function downloadUpdatedJsFile() {
+      const rewardVal = document.getElementById("global-reward-input").value;
+
+      // questions-data.js 템플릿 생성
+      const fileContent = `/**
+ * 베베숲 고객 경험 & 브랜드 미래 전략 설문 (questions-data.js)
+ * [비주얼 에디터(editor.html)에서 자동 생성됨]
+ */
+
+const SURVEY_STEPS = ${JSON.stringify(SURVEY_STEPS, null, 2)};
+const SECTION_TITLES = ${JSON.stringify(SECTION_TITLES, null, 2)};
+
+const PRIVACY_TERMS = {
+  general: \`수집 정보: 성함, 휴대전화 번호\\n이용 목적: 설문 참여 경품 추첨 및 당첨 안내, 혜택(쿠폰) 발송, (동의 시) 심층 인터뷰 대상자 연락 및 리워드(${rewardVal}) 지급\\n보유 및 이용 기간: 경품 추첨 및 인터뷰 종료 후 3개월\\n개인정보는 위 목적 이외에는 사용되지 않으며, 보유기간 경과 시 지체 없이 파기합니다.\`
+};
+
+const COMMON_DIFFICULTY_OPTIONS = ${JSON.stringify(COMMON_DIFFICULTY_OPTIONS, null, 2)};
+
+const SURVEY_QUESTIONS = ${JSON.stringify(editorQuestions, null, 2)};
+
+// 분기 로직
+const SURVEY_CONDITIONS = {
+  Q6: (ans) => {
+    if (!ans.Q5) return false;
+    if (["지금과 같은 브랜드", "이전에 사용한 브랜드 없음", "기억나지 않음"].includes(ans.Q5)) return false;
+    const q4Val = ans.Q4 === "기타 브랜드" ? (ans.Q4_other || "").trim() : ans.Q4;
+    const q5Val = ans.Q5 === "기타 브랜드" ? (ans.Q5_other || "").trim() : ans.Q5;
+    return q4Val !== q5Val;
+  },
+  Q8: (ans) => ans.Q7 && ans.Q7.includes("네"),
+  "Q8-1": (ans) => ans.Q7 && ans.Q7.includes("네"),
+  Q12: (ans) => ["어려운 편", "매우 어려움"].includes(ans.Q11)
+};
+`;
+
+      const blob = new Blob([fileContent], { type: "text/javascript;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "questions-data.js";
+      a.click();
+      URL.revokeObjectURL(url);
+
+      alert("🎉 'questions-data.js' 파일이 다운로드되었습니다!\n\nD:\\bebesup-survey\\standalone-preview\\ 폴더에 덮어쓰기만 하시면 즉시 적용됩니다.");
+    }
+
+    document.getElementById("download-file-btn").addEventListener("click", downloadUpdatedJsFile);
+    document.getElementById("floating-download-btn").addEventListener("click", downloadUpdatedJsFile);
+
+    // 초기 렌더링
+    renderEditor();
+  </script>
+</body>
+</html>

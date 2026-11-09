@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>베베숲 고객 경험 설문조사</title>
+  <meta name="description" content="베베숲 고객님의 솔직한 목소리와 더 나은 제품을 위한 제언을 들려주세요." />
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <!-- 상단 탑바 -->
+  <header class="topbar">
+    <a class="brand" href="./index.html">
+      <img src="./bebesup-logo.png" alt="베베숲 Bebesup" class="brand-logo" onerror="this.style.display='none'; document.getElementById('brand-fallback').style.display='block';" />
+      <span id="brand-fallback" class="brand-text" style="display:none;">Bebesup</span>
+    </a>
+    <span class="topbar-subtitle">고객 경험 설문조사</span>
+  </header>
+
+  <!-- 메인 레이아웃 -->
+  <main class="shell">
+    <!-- 좌측 안내 및 단계 네비게이션 -->
+    <aside>
+      <div>
+        <div class="eyebrow">YOUR VOICE MATTERS</div>
+        <h1>베베숲의 변화,<br/>고객님의 이야기에서.</h1>
+        <p>물티슈를 넘어 더 나은 브랜드로 나아가기 위한<br/>고객님의 솔직하고 냉정한 평가를 들려주세요.</p>
+        <div class="side-note">약 4분 소요 · 베베숲 구매 고객 대상</div>
+      </div>
+      <ol class="steps" id="step-list">
+        <li class="active">01　나의 물티슈 사용</li>
+        <li>02　사용 제품 & 구매 채널</li>
+        <li>03　물티슈 선택 경험</li>
+        <li>04　베베숲 이용 경험</li>
+        <li>05　물티슈 너머 & 신제품 제언</li>
+        <li>06　경품 응모 & 인터뷰 신청</li>
+      </ol>
+    </aside>
+
+    <!-- 우측 설문 진행 페이퍼 -->
+    <section class="paper">
+      <div class="section-meta">
+        <span id="step-meta">01 / 06</span>
+        <span id="step-title-meta">나의 물티슈 사용</span>
+      </div>
+
+      <!-- 진행률 바 -->
+      <div class="progress-track">
+        <div class="progress-indicator" id="progress-indicator" style="width: 0%;"></div>
+      </div>
+
+      <!-- 유효성 검사 경고 메시지 -->
+      <div id="error-alert" class="error-message"></div>
+
+      <!-- 설문 문항 렌더링 영역 -->
+      <div id="section-content">
+        <!-- app.js에서 동적으로 렌더링됩니다 -->
+      </div>
+
+      <!-- 하단 네비게이션 버튼 -->
+      <div class="navigation">
+        <button type="button" class="btn secondary" id="prev-btn" disabled>이전</button>
+        <button type="button" class="btn primary" id="next-btn">다음으로 →</button>
+      </div>
+      <p class="muted" style="font-size: 12px; margin-top: 16px;">
+        ※ 응답에 따라 다음 질문이 달라집니다. 브라우저를 새로고침하거나 닫아도 작성 중인 답변이 자동 보존됩니다.
+      </p>
+    </section>
+  </main>
+
+  <footer>
+    베베숲 · 고객님의 솔직한 목소리가 더 나은 제품과 변화를 만듭니다.
+  </footer>
+
+  <!-- 데이터 및 앱 엔진 -->
+  <script src="./questions-data.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
