@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>베베숲 설문조사 전체 흐름도 (이미지 저장/복사)</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    body { background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", sans-serif; }
+    #diagram-container { background: white; border-radius: 16px; padding: 32px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
+  </style>
+</head>
+<body class="min-h-screen p-6 md:p-10 flex flex-col items-center">
+
+  <!-- 상단 컨트롤 헤더 -->
+  <header class="w-full max-w-5xl mb-6 flex flex-wrap items-center justify-between gap-4 bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+    <div>
+      <h1 class="text-xl font-black text-[#087768] tracking-tight">베베숲 설문조사 전체 흐름도</h1>
+      <p class="text-xs text-slate-500 mt-1">보고서나 카카오톡, PPT에 바로 붙여넣으실 수 있도록 고화질 이미지로 다운로드/복사할 수 있습니다.</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <button id="copy-img-btn" class="px-4 py-2 text-sm font-bold text-white bg-[#087768] hover:bg-[#065e52] rounded-xl shadow-sm transition flex items-center gap-2">
+        <span>📋 이미지 바로 복사 (클립보드)</span>
+      </button>
+      <button id="download-png-btn" class="px-4 py-2 text-sm font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition flex items-center gap-2">
+        <span>💾 PNG 이미지로 다운로드</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- 다이어그램 렌더링 영역 -->
+  <main class="w-full max-w-5xl">
+    <div id="diagram-container" class="overflow-x-auto flex justify-center">
+      <div id="mermaid-target" class="mermaid w-full">
+flowchart TD
+    classDef step fill:#e8f5f1,stroke:#087768,stroke-width:2px,color:#064e43;
+    classDef branch fill:#fff4e6,stroke:#f59f00,stroke-width:2px,color:#8a5300;
+    classDef endstep fill:#f1f3f5,stroke:#495057,stroke-width:2px,color:#212529;
+
+    Start([설문 시작: 인트로 혜택 안내]) --> S1
+
+    subgraph S1 ["Step 1: 나의 물티슈 사용 (기초 페르소나)"]
+        Q1["Q1. 누구를 위해 사용? (1인가구 / 아이 / 반려 등)"] --> Q2["Q2. 주 사용 목적 (기저귀, 얼굴/손, 청소 등)"]
+        Q2 --> Q3["Q3. 1팩 소진 주기 (소비 속도)"]
+    end
+    S1:::step --> S2
+
+    subgraph S2 ["Step 2: 사용 제품 & 구매 채널 (시장 점유 & 병용 행동)"]
+        Q4["Q4. 가장 자주 쓰는 물티슈 브랜드"] --> Q5["Q5. 이전에 쓰던 물티슈 브랜드"]
+        Q5 --> B_Q6{"Q4 ≠ Q5 ?<br/>(브랜드 갈아탐?)"}:::branch
+        B_Q6 -- "Yes" --> Q6["Q6. 브랜드를 바꾼 결정적 이유"]
+        B_Q6 -- "No" --> Q7["Q7. 여러 브랜드 병용 여부"]
+        Q6 --> Q7
+        
+        Q7 --> B_Q8{"Q7 == '네'?<br/>(병용 중?)"}:::branch
+        B_Q8 -- "Yes" --> Q8["Q8. 병용하는 다른 브랜드"]
+        Q8 --> Q8_1["Q8-1. 나눠 쓰는 구체적 이유 (용도 분리)"]
+        Q8_1 --> Q8_ch["Q8-channel. 주 구매 채널 (쿠팡, 자사몰, 마트 등)"]
+        B_Q8 -- "No" --> Q8_ch
+    end
+    S2:::step --> S3
+
+    subgraph S3 ["Step 3: 물티슈 선택 경험 (Pain Point & 라인업 혼란도)"]
+        Q9["Q9. 물티슈 선택 시 핵심 기준 (두께, 성분, 가격 등)"] --> Q10["Q10. 베베숲 주 이용 라인업 (시그니처 등)"]
+        Q10 --> Q11["Q11. 나에게 맞는 제품 찾기 난이도 (5점 척도)"]
+        Q11 --> B_Q12{"Q11 == 1~2점?<br/>(찾기 어려웠음?)"}:::branch
+        B_Q12 -- "Yes" --> Q12["Q12. 헷갈리고 어려웠던 구체적 이유"]
+        B_Q12 -- "No" --> S4
+        Q12 --> S4
+    end
+    S3:::step
+
+    subgraph S4 ["Step 4: 베베숲 이용 경험 (NPS 만족도 & 품질 개선점)"]
+        Q13["Q13. 베베숲 추천 의향 (0~10점 NPS)"] --> Q14["Q14. 가장 만족스러운 점"]
+        Q14 --> Q15["Q15. 가장 아쉬웠거나 개선이 필요한 점"]
+        Q15 --> Q16["Q16. 품질/사용감 개선 상세 제언 (서술형)"]
+    end
+    S4:::step --> S5
+
+    subgraph S5 ["Step 5: 물티슈 너머 & 신제품 제언 (카테고리 확장성)"]
+        B_Q1{"Q1 답변 확인<br/>(육아 가구 여부)"}:::branch
+        
+        B_Q1 -- "육아/출산 가구" --> Q20_baby["Q20. 현재 '아기 스킨케어/세탁세제' 주 이용 브랜드 & 고집 이유"]
+        Q20_baby --> Q21_baby["Q21. 베베숲 '아기 화장품/세제 출시' 시 솔직한 인식"]
+        
+        B_Q1 -- "1인가구 / 성인 / 반려" --> Q20_adult["Q20-adult. 현재 '가정/일상 바디케어/세탁세제' 브랜드 & 고집 이유"]
+        Q20_adult --> Q21_adult["Q21-adult. 베베숲 '온가족 생활용품 출시' 시 솔직한 인식"]
+        
+        Q21_baby --> Q22["Q22. 신제품 전용 특별 할인 쿠폰 제공 시 구매 의향"]
+        Q21_adult --> Q22
+        Q22 --> Q23["Q23. 미래 베베숲을 위한 뼈아픈 조언 & 원하는 신제품 (서술형)"]
+    end
+    S5:::step --> S6
+
+    subgraph S6 ["Step 6: 경품 응모 & 심층 인터뷰 신청 (전원 연락처 수집)"]
+        Q24["Q24. 1:1 심층 인터뷰(30분) 참여 의향<br/>(프리미엄 선물 3종 중 택1)"]
+        Q24 --> Q25["Q25. 성함 / 닉네임"]
+        Q25 --> Q26["Q26. 휴대전화 번호 (010 자동 정제)"]
+        Q26 --> Q27["Q27. 개인정보 수집·이용 동의 (필수)"]
+    end
+    S6:::step --> EndNode([설문 제출 완료: 응답 데이터 저장 & JSON 백업]):::endstep
+      </div>
+    </div>
+  </main>
+
+  <canvas id="hidden-canvas" style="display:none;"></canvas>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'default',
+      flowchart: { curve: 'basis', htmlLabels: true }
+    });
+
+    // SVG를 PNG Blob으로 변환하는 함수
+    async function getPngBlob() {
+      const svg = document.querySelector("#mermaid-target svg");
+      if (!svg) {
+        alert("다이어그램을 불러오는 중입니다. 잠시 후 다시 시도해 주세요.");
+        return null;
+      }
+
+      const svgData = new XMLSerializer().serializeToString(svg);
+      const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+      const URL = window.URL || window.webkitURL || window;
+      const blobURL = URL.createObjectURL(svgBlob);
+
+      const image = new Image();
+      return new Promise((resolve) => {
+        image.onload = () => {
+          const canvas = document.getElementById("hidden-canvas");
+          const scale = 2; // 고화질 2배율
+          canvas.width = svg.getBoundingClientRect().width * scale + 60;
+          canvas.height = svg.getBoundingClientRect().height * scale + 60;
+          const ctx = canvas.getContext("2d");
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(image, 30, 30, canvas.width - 60, canvas.height - 60);
+          URL.revokeObjectURL(blobURL);
+
+          canvas.toBlob((blob) => {
+            resolve(blob);
+          }, "image/png");
+        };
+        image.src = blobURL;
+      });
+    }
+
+    // 1. 클립보드 복사 버튼
+    document.getElementById("copy-img-btn").addEventListener("click", async () => {
+      try {
+        const blob = await getPngBlob();
+        if (!blob) return;
+
+        if (navigator.clipboard && navigator.clipboard.write) {
+          const item = new ClipboardItem({ "image/png": blob });
+          await navigator.clipboard.write([item]);
+          alert("🎉 고화질 다이어그램 이미지가 클립보드에 복사되었습니다!\n\nPPT나 카카오톡, 노션, 슬랙 대화창에서 [Ctrl + V]로 바로 붙여넣기 하세요.");
+        } else {
+          alert("이 브라우저에서는 클립보드 직접 복사를 지원하지 않습니다. [PNG 이미지로 다운로드] 버튼을 이용해 주세요.");
+        }
+      } catch (err) {
+        console.error(err);
+        alert("클립보드 복사 중 오류가 발생했습니다. [PNG 이미지로 다운로드]를 눌러 이미지 파일로 저장해 주세요.");
+      }
+    });
+
+    // 2. PNG 다운로드 버튼
+    document.getElementById("download-png-btn").addEventListener("click", async () => {
+      const blob = await getPngBlob();
+      if (!blob) return;
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "베베숲_설문조사_전체흐름도.png";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+  </script>
+</body>
+</html>
