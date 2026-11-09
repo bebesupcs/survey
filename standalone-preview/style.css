@@ -229,21 +229,34 @@ aside p {
   color: #26483f;
 }
 
-.benefit-card strong {
+.benefit-card strong.benefit-card-title,
+.benefit-card > strong:first-child {
   display: block;
   font-size: 15px;
   font-weight: 700;
   color: #164e42;
-  margin-bottom: 6px;
+  margin-bottom: 10px;
 }
 
-.benefit-card p {
+.benefit-card p,
+.benefit-card .benefit-body p {
   font-size: 14px;
   line-height: 1.6;
-  margin-bottom: 8px;
+  margin: 0 0 8px 0;
+  color: #26483f;
 }
 
-.benefit-card span {
+.benefit-card p strong,
+.benefit-card .benefit-body strong {
+  display: inline !important;
+  font-weight: 700;
+  color: #164e42;
+}
+
+.benefit-card span.benefit-time,
+.benefit-card > span {
+  display: inline-block;
+  margin-top: 4px;
   font-size: 12px;
   color: #4f7a70;
 }

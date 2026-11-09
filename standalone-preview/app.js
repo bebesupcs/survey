@@ -148,9 +148,9 @@
         <h2>${headlineHtml}</h2>
         <p class="muted">${descHtml}</p>
         <div class="benefit-card">
-          <strong>${benefitTitle}</strong>
-          <p>${benefitText}</p>
-          <span>${estimatedTime}</span>
+          <strong class="benefit-card-title">${benefitTitle}</strong>
+          <div class="benefit-body">${benefitText}</div>
+          <span class="benefit-time">${estimatedTime}</span>
         </div>
       `;
     } else {
