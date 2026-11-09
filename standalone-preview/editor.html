@@ -43,14 +43,36 @@
       </div>
     </div>
 
-    <!-- 1. 공통 혜택 및 문구 설정 -->
+    <!-- 1. 도입부 안내 문구 & 공통 혜택 설정 -->
     <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm mb-8">
       <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-        <span class="text-emerald-700">🎁</span> 공통 리워드 & 안내 문구
+        <span class="text-emerald-700">📢</span> 도입부(첫 화면) 안내 문구 & 공통 혜택
       </h2>
       <div class="grid gap-4">
         <div>
-          <label class="block text-xs font-bold text-slate-600 mb-1.5">1:1 심층 인터뷰 참여 혜택 (상품명)</label>
+          <label class="block text-xs font-bold text-slate-600 mb-1.5">도입부 대제목 (줄바꿈 가능)</label>
+          <input type="text" id="intro-headline-input" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm font-medium focus:border-[#087768] outline-none" value="평소 물티슈를&#10;어떻게 사용하고 계신가요?" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1.5">도입부 안내 본문</label>
+          <textarea id="intro-desc-input" rows="3" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm font-medium focus:border-[#087768] outline-none">안녕하세요, 베베숲입니다. 저희가 더 좋은 제품을 만들고 앞으로 고객님께 꼭 필요한 브랜드로 변화하기 위해 소중한 고객님의 솔직하고 가감 없는 생각을 듣고자 합니다. 정답은 없습니다. 평소 경험과 가장 가까운 답변을 편하게 선택해주세요.</textarea>
+        </div>
+        <div class="grid md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1.5">혜택 박스 제목</label>
+            <input type="text" id="intro-benefit-title-input" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm font-medium focus:border-[#087768] outline-none" value="🎁 설문 참여자 전원 경품 추첨 & 인터뷰 혜택" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1.5">예상 소요 시간 문구</label>
+            <input type="text" id="intro-estimated-time-input" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm font-medium focus:border-[#087768] outline-none" value="예상 소요 시간 약 4분" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1.5">혜택 박스 상세 내용</label>
+          <textarea id="intro-benefit-text-input" rows="2" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm font-medium focus:border-[#087768] outline-none">설문에 응답해주신 모든 분 중 추첨을 통해 경품을 드리며, 1:1 심층 인터뷰(약 30분)에 참여해주시는 분께는 <strong>시그니처 블랙 20팩 & 홈&스킨 선물박스</strong>을 선물로 드립니다.</textarea>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1.5">1:1 심층 인터뷰 참여 혜택 상품명 (약관 표기용)</label>
           <input type="text" id="global-reward-input" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm font-medium focus:border-[#087768] outline-none" value="시그니처 블랙 20팩 & 홈&스킨 선물박스" />
         </div>
       </div>
@@ -174,15 +196,25 @@
     // 파일 다운로드 생성
     function downloadUpdatedJsFile() {
       const rewardVal = document.getElementById("global-reward-input").value;
+      const introObj = {
+        headline: document.getElementById("intro-headline-input").value,
+        description: document.getElementById("intro-desc-input").value,
+        benefitTitle: document.getElementById("intro-benefit-title-input").value,
+        benefitText: document.getElementById("intro-benefit-text-input").value,
+        estimatedTime: document.getElementById("intro-estimated-time-input").value
+      };
 
       // questions-data.js 템플릿 생성
       const fileContent = `/**
- * 베베숲 고객 경험 & 브랜드 미래 전략 설문 (questions-data.js)
+ * 베베숲 고객 경험 설문조사 (questions-data.js)
  * [비주얼 에디터(editor.html)에서 자동 생성됨]
  */
 
 const SURVEY_STEPS = ${JSON.stringify(SURVEY_STEPS, null, 2)};
 const SECTION_TITLES = ${JSON.stringify(SECTION_TITLES, null, 2)};
+
+// 도입부(첫 화면) 안내 문구 설정
+const SURVEY_INTRO = ${JSON.stringify(introObj, null, 2)};
 
 const PRIVACY_TERMS = {
   general: \`수집 정보: 성함, 휴대전화 번호\\n이용 목적: 설문 참여 경품 추첨 및 당첨 안내, 혜택(쿠폰) 발송, (동의 시) 심층 인터뷰 대상자 연락 및 리워드(${rewardVal}) 지급\\n보유 및 이용 기간: 경품 추첨 및 인터뷰 종료 후 3개월\\n개인정보는 위 목적 이외에는 사용되지 않으며, 보유기간 경과 시 지체 없이 파기합니다.\`
@@ -220,6 +252,15 @@ const SURVEY_CONDITIONS = {
 
     document.getElementById("download-file-btn").addEventListener("click", downloadUpdatedJsFile);
     document.getElementById("floating-download-btn").addEventListener("click", downloadUpdatedJsFile);
+
+    // 초기값 불러오기
+    if (typeof SURVEY_INTRO !== 'undefined') {
+      if (SURVEY_INTRO.headline) document.getElementById("intro-headline-input").value = SURVEY_INTRO.headline;
+      if (SURVEY_INTRO.description) document.getElementById("intro-desc-input").value = SURVEY_INTRO.description;
+      if (SURVEY_INTRO.benefitTitle) document.getElementById("intro-benefit-title-input").value = SURVEY_INTRO.benefitTitle;
+      if (SURVEY_INTRO.benefitText) document.getElementById("intro-benefit-text-input").value = SURVEY_INTRO.benefitText;
+      if (SURVEY_INTRO.estimatedTime) document.getElementById("intro-estimated-time-input").value = SURVEY_INTRO.estimatedTime;
+    }
 
     // 초기 렌더링
     renderEditor();

@@ -130,16 +130,27 @@
 
     // Section 0 Welcome Banner
     if (currentSection === 0) {
+      const intro = typeof SURVEY_INTRO !== 'undefined' ? SURVEY_INTRO : {
+        headline: "평소 물티슈를\n어떻게 사용하고 계신가요?",
+        description: "안녕하세요, 베베숲입니다. 저희가 더 좋은 제품을 만들고 앞으로 고객님께 꼭 필요한 브랜드로 변화하기 위해 소중한 고객님의 솔직하고 가감 없는 생각을 듣고자 합니다. 정답은 없습니다. 평소 경험과 가장 가까운 답변을 편하게 선택해주세요.",
+        benefitTitle: "🎁 설문 참여자 전원 경품 추첨 & 인터뷰 혜택",
+        benefitText: "설문에 응답해주신 모든 분 중 추첨을 통해 경품을 드리며, 1:1 심층 인터뷰(약 30분)에 참여해주시는 분께는 <strong>시그니처 블랙 20팩 & 홈&스킨 선물박스</strong>을 선물로 드립니다.",
+        estimatedTime: "예상 소요 시간 약 4분"
+      };
+
+      const headlineHtml = (intro.headline || "평소 물티슈를<br/>어떻게 사용하고 계신가요?").replace(/\n/g, "<br/>");
+      const descHtml = (intro.description || "").replace(/\n/g, "<br/>");
+      const benefitTitle = intro.benefitTitle || "🎁 설문 참여자 전원 경품 추첨 & 인터뷰 혜택";
+      const benefitText = intro.benefitText || "";
+      const estimatedTime = intro.estimatedTime || "예상 소요 시간 약 4분";
+
       html += `
-        <h2>평소 물티슈를<br/>어떻게 사용하고 계신가요?</h2>
-        <p class="muted">
-          안녕하세요, 베베숲입니다. 저희가 더 좋은 제품을 만들고 앞으로 고객님께 꼭 필요한 브랜드로 변화하기 위해 소중한 고객님의 솔직하고 가감 없는 생각을 듣고자 합니다.
-          정답은 없습니다. 평소 경험과 가장 가까운 답변을 편하게 선택해주세요.
-        </p>
+        <h2>${headlineHtml}</h2>
+        <p class="muted">${descHtml}</p>
         <div class="benefit-card">
-          <strong>🎁 설문 참여자 전원 경품 추첨 & 인터뷰 혜택</strong>
-          <p>설문에 응답해주신 모든 분 중 추첨을 통해 경품을 드리며, 1:1 심층 인터뷰(약 30분)에 참여해주시는 분께는 <strong>시그니처 블랙 20팩 & 홈&스킨 선물박스</strong>을 선물로 드립니다.</p>
-          <span>예상 소요 시간 약 4분</span>
+          <strong>${benefitTitle}</strong>
+          <p>${benefitText}</p>
+          <span>${estimatedTime}</span>
         </div>
       `;
     } else {
