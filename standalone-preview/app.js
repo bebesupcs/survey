@@ -450,7 +450,7 @@
           보내주신 마음에 깊이 감사드립니다.
         </p>
         <p style="margin-top:16px; font-weight:700; color:var(--primary); font-size:15px;">🎁 설문 참여 경품 추첨 결과는 입력해주신 연락처로 개별 안내드립니다.</p>
-        ${interviewJoined ? `<p style="margin-top:8px; font-weight:700; color:#173a31; font-size:15px;">🎙️ 1:1 심층 인터뷰 대상자로 선정되실 경우, 별도로 연락드리겠습니다. (시그니처 블랙 20팩 & 홈&스킨 선물박스 증정)</p>` : ""}
+        ${interviewJoined ? `<p style="margin-top:8px; font-weight:700; color:#173a31; font-size:15px;">🎙️ 1:1 심층 인터뷰 대상자로 선정되실 경우, 별도로 연락드리겠습니다. (프리미엄 선물 세트 3종 중 택1 증정)</p>` : ""}
         
         <div class="success-actions">
           <button type="button" class="btn primary" id="export-json-btn">📥 응답 결과 JSON 다운로드</button>
