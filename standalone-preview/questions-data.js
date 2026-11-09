@@ -34,7 +34,7 @@ const SURVEY_INTRO = {
   description: "안녕하세요, 베베숲입니다. 저희가 더 좋은 제품을 만들고 앞으로 고객님께 꼭 필요한 브랜드로 변화하기 위해 소중한 고객님의 솔직하고 가감 없는 생각을 듣고자 합니다. 정답은 없습니다. 평소 경험과 가장 가까운 답변을 편하게 선택해주세요.",
   benefitTitle: "🎁 설문 참여자 30명 경품 추첨 & 1:1 심층 인터뷰 혜택",
   benefitText: `<p>• <strong>설문 참여 혜택:</strong> 응답자 중 30분을 추첨하여 <strong>시그니처 위드 블루 20팩 1BOX</strong>를 선물로 드립니다.</p><p>• <strong>1:1 심층 인터뷰(약 30분) 혜택:</strong> 참여자로 선정되시는 분께는 <strong>프리미엄 선물 세트(시그니처 블랙 20팩 / 아기 세제 세트 / 신생아 스킨케어 4종 세트 중 택1)</strong>를 선물로 드립니다.</p>`,
-  estimatedTime: "예상 소요 시간 약 5분"
+  estimatedTime: "예상 소요 시간 약 3분"
 };
 
 const PRIVACY_TERMS = {
