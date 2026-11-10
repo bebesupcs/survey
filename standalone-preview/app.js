@@ -3,7 +3,19 @@
  */
 
 (function () {
-  const STORAGE_KEY = "bebesup_survey_strategy_v4";
+  const STORAGE_KEY = "bebesup_survey_prod_v20261110_clean";
+
+  // Purge any legacy stale storage keys to prevent cached option mismatches
+  try {
+    [
+      "bebesup_survey_strategy_v4",
+      "bebesup_survey_preview_v2",
+      "bebesup_survey_answers_v1",
+      "bebesup_survey_data_v1"
+    ].forEach(k => {
+      localStorage.removeItem(k);
+    });
+  } catch (e) {}
 
   // State
   let answers = {};
@@ -20,7 +32,7 @@
   const nextBtn = document.getElementById("next-btn");
   const errorAlertEl = document.getElementById("error-alert");
 
-  // Sanitize stored answers against current SURVEY_QUESTIONS definition
+  // Sanitize stored answers strictly against current SURVEY_QUESTIONS definition
   function sanitizeAnswers() {
     if (!answers || typeof answers !== "object") {
       answers = {};
@@ -40,7 +52,12 @@
           }
         } else if (q.type === "single") {
           const validOptions = q.options || [];
-          if (typeof val === "string" && !validOptions.includes(val)) {
+          if (typeof val !== "string" || !validOptions.includes(val)) {
+            delete answers[q.id];
+          }
+        } else if (q.type === "score") {
+          const validOptions = q.options || [];
+          if (!validOptions.includes(String(val))) {
             delete answers[q.id];
           }
         } else if (q.type === "text") {
@@ -282,10 +299,13 @@
 
     switch (q.type) {
       case "single":
+        const validSingleOpts = q.options || [];
+        const currentSingleVal = (val && validSingleOpts.includes(val)) ? val : "";
+        if (!currentSingleVal) delete answers[q.id];
         bodyHtml = `
           <div class="choices" data-qid="${q.id}" data-type="single">
             ${q.options.map(opt => {
-              const checked = val === opt;
+              const checked = currentSingleVal === opt;
               const isOther = opt.includes("기타");
               return `
                 <div>
@@ -463,7 +483,16 @@
     for (const q of qs) {
       let val = answers[q.id];
 
-      if (q.type === "multi") {
+      if (q.type === "single") {
+        const validOpts = q.options || [];
+        if (val && !validOpts.includes(val)) {
+          delete answers[q.id];
+          val = undefined;
+        }
+        if (q.required && (!val || typeof val !== "string" || !val.trim())) {
+          return { qid: q.id, msg: `${q.id} 문항에 응답해주세요.` };
+        }
+      } else if (q.type === "multi") {
         const validOpts = q.options || [];
         val = (Array.isArray(val) ? val : []).filter(v => validOpts.includes(v));
         answers[q.id] = val;
@@ -473,6 +502,15 @@
         }
         if (q.max && val.length > q.max) {
           return { qid: q.id, msg: `${q.id} 문항은 최대 ${q.max}개까지 선택 가능합니다.` };
+        }
+      } else if (q.type === "score") {
+        const validOpts = q.options || [];
+        if (val && !validOpts.includes(String(val))) {
+          delete answers[q.id];
+          val = undefined;
+        }
+        if (q.required && (val === undefined || val === null || val === "")) {
+          return { qid: q.id, msg: `${q.id} 문항에 응답해주세요.` };
         }
       } else if (q.required) {
         if (val === undefined || val === null || val === "" || (typeof val === "string" && !val.trim())) {
