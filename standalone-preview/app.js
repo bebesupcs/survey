@@ -20,11 +20,44 @@
   const nextBtn = document.getElementById("next-btn");
   const errorAlertEl = document.getElementById("error-alert");
 
+  // Sanitize stored answers against current SURVEY_QUESTIONS definition
+  function sanitizeAnswers() {
+    if (!answers || typeof answers !== "object") {
+      answers = {};
+      return;
+    }
+    if (typeof SURVEY_QUESTIONS !== "undefined" && Array.isArray(SURVEY_QUESTIONS)) {
+      SURVEY_QUESTIONS.forEach(q => {
+        const val = answers[q.id];
+        if (val === undefined || val === null) return;
+
+        if (q.type === "multi") {
+          const validOptions = q.options || [];
+          if (Array.isArray(val)) {
+            answers[q.id] = val.filter(v => validOptions.includes(v));
+          } else {
+            answers[q.id] = [];
+          }
+        } else if (q.type === "single") {
+          const validOptions = q.options || [];
+          if (typeof val === "string" && !validOptions.includes(val)) {
+            delete answers[q.id];
+          }
+        } else if (q.type === "text") {
+          if (Array.isArray(val)) {
+            answers[q.id] = val.join(", ");
+          }
+        }
+      });
+    }
+  }
+
   // Load from LocalStorage if available
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       answers = JSON.parse(saved);
+      sanitizeAnswers();
     }
   } catch (e) {
     console.warn("Storage load error", e);
@@ -273,7 +306,9 @@
         break;
 
       case "multi":
-        const selectedArr = Array.isArray(val) ? val : [];
+        const validOpts = q.options || [];
+        const selectedArr = (Array.isArray(val) ? val : []).filter(v => validOpts.includes(v));
+        answers[q.id] = selectedArr;
         bodyHtml = `
           <div class="choices" data-qid="${q.id}" data-type="multi" data-max="${q.max || 99}">
             ${q.options.map(opt => {
@@ -358,15 +393,21 @@
         const parent = e.target.closest(".choices");
         const qid = parent.dataset.qid;
         const max = parseInt(parent.dataset.max, 10) || 99;
+        const q = SURVEY_QUESTIONS.find(item => item.id === qid);
+        const validOpts = q && q.options ? q.options : [];
 
-        let current = Array.isArray(answers[qid]) ? [...answers[qid]] : [];
+        // Always sanitize current answers against currently valid options
+        let current = (Array.isArray(answers[qid]) ? answers[qid] : []).filter(v => validOpts.includes(v));
+
         if (e.target.checked) {
-          if (current.length >= max) {
+          if (current.length >= max && !current.includes(e.target.value)) {
             e.target.checked = false;
             highlightQuestion(qid, `최대 ${max}개까지만 선택하실 수 있습니다.`);
             return;
           }
-          current.push(e.target.value);
+          if (!current.includes(e.target.value)) {
+            current.push(e.target.value);
+          }
         } else {
           current = current.filter(v => v !== e.target.value);
         }
@@ -420,20 +461,25 @@
     const qs = SURVEY_QUESTIONS.filter(q => q.section === currentSection && isQuestionVisible(q));
 
     for (const q of qs) {
-      const val = answers[q.id];
+      let val = answers[q.id];
 
-      if (q.required) {
+      if (q.type === "multi") {
+        const validOpts = q.options || [];
+        val = (Array.isArray(val) ? val : []).filter(v => validOpts.includes(v));
+        answers[q.id] = val;
+
+        if (q.required && val.length === 0) {
+          return { qid: q.id, msg: `${q.id} 문항에 최소 1개 이상 선택해주세요.` };
+        }
+        if (q.max && val.length > q.max) {
+          return { qid: q.id, msg: `${q.id} 문항은 최대 ${q.max}개까지 선택 가능합니다.` };
+        }
+      } else if (q.required) {
         if (val === undefined || val === null || val === "" || (typeof val === "string" && !val.trim())) {
           return { qid: q.id, msg: `${q.id} 문항에 응답해주세요.` };
         }
         if (Array.isArray(val) && val.length === 0) {
           return { qid: q.id, msg: `${q.id} 문항에 최소 1개 이상 선택해주세요.` };
-        }
-      }
-
-      if (q.type === "multi" && q.max && Array.isArray(val)) {
-        if (val.length > q.max) {
-          return { qid: q.id, msg: `${q.id} 문항은 최대 ${q.max}개까지 선택 가능합니다.` };
         }
       }
 
