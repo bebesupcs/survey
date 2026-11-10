@@ -207,6 +207,8 @@
         estimatedTime: document.getElementById("intro-estimated-time-input").value
       };
 
+      const privacyText = `수집 정보: 성함, 휴대전화 번호\n이용 목적: 설문 참여 경품 추첨(시그니처 위드 블루 20팩 30명) 및 당첨 안내, 혜택(쿠폰) 발송, (동의 시) 심층 인터뷰 대상자 연락 및 리워드(${rewardVal}) 지급\n보유 및 이용 기간: 경품 추첨 및 인터뷰 종료 후 3개월\n개인정보는 위 목적 이외에는 사용되지 않으며, 보유기간 경과 시 지체 없이 파기합니다.`;
+
       return `/**
  * 베베숲 고객 경험 설문조사 (questions-data.js)
  * [비주얼 에디터(editor.html)에서 자동 생성됨]
@@ -219,7 +221,7 @@ const SECTION_TITLES = ${JSON.stringify(SECTION_TITLES, null, 2)};
 const SURVEY_INTRO = ${JSON.stringify(introObj, null, 2)};
 
 const PRIVACY_TERMS = {
-  general: \`수집 정보: 성함, 휴대전화 번호\\n이용 목적: 설문 참여 경품 추첨(시그니처 위드 블루 20팩 30명) 및 당첨 안내, 혜택(쿠폰) 발송, (동의 시) 심층 인터뷰 대상자 연락 및 리워드(\${rewardVal}) 지급\\n보유 및 이용 기간: 경품 추첨 및 인터뷰 종료 후 3개월\\n개인정보는 위 목적 이외에는 사용되지 않으며, 보유기간 경과 시 지체 없이 파기합니다.\`
+  general: ${JSON.stringify(privacyText)}
 };
 
 const COMMON_DIFFICULTY_OPTIONS = ${JSON.stringify(COMMON_DIFFICULTY_OPTIONS, null, 2)};
