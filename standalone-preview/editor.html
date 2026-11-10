@@ -25,8 +25,11 @@
       <a href="./index.html" target="_blank" class="px-4 py-2 text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition flex items-center gap-1.5">
         <span>👀 설문 미리보기</span>
       </a>
-      <button id="download-file-btn" class="px-5 py-2 text-sm font-bold text-white bg-[#087768] hover:bg-[#065e52] rounded-lg shadow-sm transition flex items-center gap-1.5">
-        <span>💾 변경사항 파일로 다운로드</span>
+      <button id="direct-save-btn" class="px-5 py-2 text-sm font-bold text-white bg-[#087768] hover:bg-[#065e52] rounded-lg shadow-md transition flex items-center gap-1.5">
+        <span>🚀 원클릭 저장 & 사이트 즉시 배포</span>
+      </button>
+      <button id="download-file-btn" class="px-4 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition flex items-center gap-1">
+        <span>💾 파일 다운로드(백업)</span>
       </button>
     </div>
   </header>
@@ -193,8 +196,8 @@
       renderEditor();
     };
 
-    // 파일 다운로드 생성
-    function downloadUpdatedJsFile() {
+    // 파일 내용 생성 헬퍼
+    function generateJsFileContent() {
       const rewardVal = document.getElementById("global-reward-input").value;
       const introObj = {
         headline: document.getElementById("intro-headline-input").value,
@@ -204,8 +207,7 @@
         estimatedTime: document.getElementById("intro-estimated-time-input").value
       };
 
-      // questions-data.js 템플릿 생성
-      const fileContent = `/**
+      return `/**
  * 베베숲 고객 경험 설문조사 (questions-data.js)
  * [비주얼 에디터(editor.html)에서 자동 생성됨]
  */
@@ -217,7 +219,7 @@ const SECTION_TITLES = ${JSON.stringify(SECTION_TITLES, null, 2)};
 const SURVEY_INTRO = ${JSON.stringify(introObj, null, 2)};
 
 const PRIVACY_TERMS = {
-  general: \`수집 정보: 성함, 휴대전화 번호\\n이용 목적: 설문 참여 경품 추첨 및 당첨 안내, 혜택(쿠폰) 발송, (동의 시) 심층 인터뷰 대상자 연락 및 리워드(${rewardVal}) 지급\\n보유 및 이용 기간: 경품 추첨 및 인터뷰 종료 후 3개월\\n개인정보는 위 목적 이외에는 사용되지 않으며, 보유기간 경과 시 지체 없이 파기합니다.\`
+  general: \`수집 정보: 성함, 휴대전화 번호\\n이용 목적: 설문 참여 경품 추첨(시그니처 위드 블루 20팩 30명) 및 당첨 안내, 혜택(쿠폰) 발송, (동의 시) 심층 인터뷰 대상자 연락 및 리워드(\${rewardVal}) 지급\\n보유 및 이용 기간: 경품 추첨 및 인터뷰 종료 후 3개월\\n개인정보는 위 목적 이외에는 사용되지 않으며, 보유기간 경과 시 지체 없이 파기합니다.\`
 };
 
 const COMMON_DIFFICULTY_OPTIONS = ${JSON.stringify(COMMON_DIFFICULTY_OPTIONS, null, 2)};
@@ -235,10 +237,65 @@ const SURVEY_CONDITIONS = {
   },
   Q8: (ans) => ans.Q7 && ans.Q7.includes("네"),
   "Q8-1": (ans) => ans.Q7 && ans.Q7.includes("네"),
-  Q12: (ans) => ["어려운 편", "매우 어려움"].includes(ans.Q11)
+  Q12: (ans) => ["어려운 편", "매우 어려움"].includes(ans.Q11),
+  Q20: (ans) => {
+    const q1 = ans.Q1 || [];
+    const babyOpts = ["임신·출산 준비", "0~12개월 아이", "13~36개월 아이", "4세 이상 자녀"];
+    return Array.isArray(q1) ? (q1.length === 0 || q1.some(opt => babyOpts.includes(opt))) : true;
+  },
+  "Q20-adult": (ans) => {
+    const q1 = ans.Q1 || [];
+    const babyOpts = ["임신·출산 준비", "0~12개월 아이", "13~36개월 아이", "4세 이상 자녀"];
+    return Array.isArray(q1) && q1.length > 0 && !q1.some(opt => babyOpts.includes(opt));
+  },
+  Q21: (ans) => {
+    const q1 = ans.Q1 || [];
+    const babyOpts = ["임신·출산 준비", "0~12개월 아이", "13~36개월 아이", "4세 이상 자녀"];
+    return Array.isArray(q1) ? (q1.length === 0 || q1.some(opt => babyOpts.includes(opt))) : true;
+  },
+  "Q21-adult": (ans) => {
+    const q1 = ans.Q1 || [];
+    const babyOpts = ["임신·출산 준비", "0~12개월 아이", "13~36개월 아이", "4세 이상 자녀"];
+    return Array.isArray(q1) && q1.length > 0 && !q1.some(opt => babyOpts.includes(opt));
+  }
 };
 `;
+    }
 
+    // 1. 실시간 서버 직접 저장 & 자동 배포
+    async function saveAndDeployDirectly() {
+      const btn = document.getElementById("direct-save-btn");
+      const floatingBtn = document.getElementById("floating-download-btn");
+      const origText = btn ? btn.innerHTML : "";
+      if (btn) { btn.innerHTML = "<span>⏳ 서버 저장 및 자동 배포 중...</span>"; btn.disabled = true; }
+      if (floatingBtn) { floatingBtn.textContent = "⏳ 저장 및 배포 중..."; floatingBtn.disabled = true; }
+
+      const fileContent = generateJsFileContent();
+
+      try {
+        const res = await fetch("http://localhost:3030/api/save", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fileContent })
+        });
+        const result = await res.json();
+        if (result.success) {
+          alert("🎉 완벽하게 저장되었습니다!\n\nNetlify로 즉시 전송되어 약 20초 후 실제 사이트(bebesup-survey.netlify.app)에 자동 반영됩니다.");
+        } else {
+          throw new Error(result.error);
+        }
+      } catch (err) {
+        console.warn("로컬 서버 통신 실패, 파일 다운로드로 백업:", err);
+        downloadUpdatedJsFile();
+      } finally {
+        if (btn) { btn.innerHTML = origText; btn.disabled = false; }
+        if (floatingBtn) { floatingBtn.textContent = "📥 questions-data.js 다운로드"; floatingBtn.disabled = false; }
+      }
+    }
+
+    // 2. 파일 다운로드 (백업용)
+    function downloadUpdatedJsFile() {
+      const fileContent = generateJsFileContent();
       const blob = new Blob([fileContent], { type: "text/javascript;charset=utf-8" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -246,12 +303,11 @@ const SURVEY_CONDITIONS = {
       a.download = "questions-data.js";
       a.click();
       URL.revokeObjectURL(url);
-
-      alert("🎉 'questions-data.js' 파일이 다운로드되었습니다!\n\nD:\\bebesup-survey\\standalone-preview\\ 폴더에 덮어쓰기만 하시면 즉시 적용됩니다.");
     }
 
+    document.getElementById("direct-save-btn").addEventListener("click", saveAndDeployDirectly);
     document.getElementById("download-file-btn").addEventListener("click", downloadUpdatedJsFile);
-    document.getElementById("floating-download-btn").addEventListener("click", downloadUpdatedJsFile);
+    document.getElementById("floating-download-btn").addEventListener("click", saveAndDeployDirectly);
 
     // 초기값 불러오기
     if (typeof SURVEY_INTRO !== 'undefined') {
