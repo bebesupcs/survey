@@ -102,7 +102,67 @@
     } catch (e) {}
   }
 
-  // Show Error Alert
+  // Toast Notification
+  let toastTimer = null;
+  function showToast(msg) {
+    if (!msg) return;
+    let container = document.getElementById("toast-container");
+    if (!container) {
+      container = document.createElement("div");
+      container.id = "toast-container";
+      container.className = "toast-popup-container";
+      container.innerHTML = `
+        <div class="toast-popup">
+          <span class="toast-icon">!</span>
+          <span class="toast-msg"></span>
+        </div>
+      `;
+      document.body.appendChild(container);
+    }
+    const msgEl = container.querySelector(".toast-msg");
+    if (msgEl) msgEl.textContent = msg;
+
+    container.classList.add("show");
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      container.classList.remove("show");
+    }, 3200);
+  }
+
+  // Highlight Question with Shake / Pulse Effect & Smooth Scroll
+  function highlightQuestion(qid, msg) {
+    // Remove previous highlights
+    document.querySelectorAll(".field-error-highlight").forEach(el => {
+      el.classList.remove("field-error-highlight");
+    });
+
+    if (qid) {
+      const field = document.getElementById("field-" + qid);
+      if (field) {
+        // Trigger reflow to restart animation if already applied
+        void field.offsetWidth;
+        field.classList.add("field-error-highlight");
+        field.scrollIntoView({ behavior: "smooth", block: "center" });
+
+        // Remove highlight on next user interaction with this field
+        const removeHighlight = () => {
+          field.classList.remove("field-error-highlight");
+          field.removeEventListener("input", removeHighlight, true);
+          field.removeEventListener("change", removeHighlight, true);
+          field.removeEventListener("click", removeHighlight, true);
+        };
+        field.addEventListener("input", removeHighlight, true);
+        field.addEventListener("change", removeHighlight, true);
+        field.addEventListener("click", removeHighlight, true);
+      }
+    }
+
+    if (msg) {
+      showToast(msg);
+    }
+  }
+
+  // Show Error Alert (Kept for fallback, does NOT jump scroll to top)
   function showError(msg) {
     if (!msg) {
       errorAlertEl.style.display = "none";
@@ -111,7 +171,7 @@
     }
     errorAlertEl.textContent = msg;
     errorAlertEl.style.display = "block";
-    errorAlertEl.scrollIntoView({ behavior: "smooth", block: "center" });
+    showToast(msg);
   }
 
   // Render Current Section
@@ -303,7 +363,7 @@
         if (e.target.checked) {
           if (current.length >= max) {
             e.target.checked = false;
-            showError(`최대 ${max}개까지만 선택하실 수 있습니다.`);
+            highlightQuestion(qid, `최대 ${max}개까지만 선택하실 수 있습니다.`);
             return;
           }
           current.push(e.target.value);
@@ -363,36 +423,36 @@
       const val = answers[q.id];
 
       if (q.required) {
-        if (val === undefined || val === null || val === "") {
-          return `${q.id} 문항에 응답해주세요.`;
+        if (val === undefined || val === null || val === "" || (typeof val === "string" && !val.trim())) {
+          return { qid: q.id, msg: `${q.id} 문항에 응답해주세요.` };
         }
         if (Array.isArray(val) && val.length === 0) {
-          return `${q.id} 문항에 최소 1개 이상 선택해주세요.`;
+          return { qid: q.id, msg: `${q.id} 문항에 최소 1개 이상 선택해주세요.` };
         }
       }
 
       if (q.type === "multi" && q.max && Array.isArray(val)) {
         if (val.length > q.max) {
-          return `${q.id} 문항은 최대 ${q.max}개까지 선택 가능합니다.`;
+          return { qid: q.id, msg: `${q.id} 문항은 최대 ${q.max}개까지 선택 가능합니다.` };
         }
       }
 
       if (q.type === "phone" && val) {
         const cleaned = val.replace(/[^0-9]/g, "");
         if (!/^(010\d{8}|01[16789]\d{7,8})$/.test(cleaned)) {
-          return "휴대전화 번호를 정확히 입력해주세요. (예: 010-1234-5678)";
+          return { qid: q.id, msg: "휴대전화 번호를 정확히 입력해주세요. (예: 010-1234-5678)" };
         }
       }
 
       if (q.id === "Q27-agree" && val === "동의하지 않습니다") {
-        return "경품 추첨 및 당첨 안내를 위해 개인정보 수집·이용 동의가 필요합니다.";
+        return { qid: q.id, msg: "경품 추첨 및 당첨 안내를 위해 개인정보 수집·이용 동의가 필요합니다." };
       }
 
       const isOtherChecked = Array.isArray(val) ? val.some(v => typeof v === 'string' && v.includes("기타")) : (typeof val === "string" && val.includes("기타"));
       if (isOtherChecked) {
         const otherVal = (answers[q.id + "_other"] || "").trim();
         if (!otherVal) {
-          return `${q.id} 문항의 기타 직접 입력란을 작성해주세요.`;
+          return { qid: q.id, msg: `${q.id} 문항의 기타 직접 입력란을 작성해주세요.` };
         }
       }
     }
@@ -404,7 +464,7 @@
   nextBtn.addEventListener("click", () => {
     const error = validateCurrentSection();
     if (error) {
-      showError(error);
+      highlightQuestion(error.qid, error.msg);
       return;
     }
 

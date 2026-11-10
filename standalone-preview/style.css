@@ -266,6 +266,53 @@ fieldset {
   border: 0;
   margin: 32px 0 40px;
   padding: 0;
+  transition: all 0.25s ease;
+  scroll-margin-top: 100px;
+}
+
+@keyframes shake-and-pulse {
+  0% { transform: translateX(0); }
+  15% { transform: translateX(-8px); }
+  30% { transform: translateX(8px); }
+  45% { transform: translateX(-5px); }
+  60% { transform: translateX(5px); }
+  75% { transform: translateX(-2px); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes pulse-glow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(224, 79, 79, 0.45);
+    border-color: #e04f4f;
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(224, 79, 79, 0.15);
+    border-color: #ff5252;
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(224, 79, 79, 0);
+    border-color: #e04f4f;
+  }
+}
+
+fieldset.field-error-highlight {
+  position: relative;
+  background-color: #fff8f8 !important;
+  border: 2px solid #e04f4f !important;
+  border-radius: 14px !important;
+  padding: 20px 22px !important;
+  margin: 24px -12px 36px !important;
+  animation: shake-and-pulse 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both, pulse-glow 1.5s infinite;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+fieldset.field-error-highlight legend small {
+  color: #c53030 !important;
+}
+
+fieldset.field-error-highlight legend small b {
+  background-color: #fed7d7 !important;
+  color: #c53030 !important;
 }
 
 legend {
@@ -503,6 +550,54 @@ button:disabled {
   font-weight: 600;
   margin-bottom: 20px;
   display: none;
+}
+
+/* Floating Toast Popup */
+.toast-popup-container {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  z-index: 10000;
+  pointer-events: none;
+  opacity: 0;
+  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.28s ease;
+  max-width: 90vw;
+}
+
+.toast-popup-container.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.toast-popup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(26, 36, 33, 0.95);
+  backdrop-filter: blur(8px);
+  color: #ffffff;
+  padding: 14px 22px;
+  border-radius: 999px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(255, 255, 255, 0.12);
+  font-size: 14.5px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
+
+.toast-popup .toast-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: #e04f4f;
+  color: #ffffff;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 800;
+  flex-shrink: 0;
 }
 
 /* Footer */
