@@ -25,6 +25,9 @@
       <a href="./index.html" target="_blank" class="px-4 py-2 text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition flex items-center gap-1.5">
         <span>👀 설문 미리보기</span>
       </a>
+      <button id="auth-settings-btn" title="팀원 클라우드 배포 설정" class="px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition flex items-center gap-1">
+        <span>⚙️ 배포 설정</span>
+      </button>
       <button id="direct-save-btn" class="px-5 py-2 text-sm font-bold text-white bg-[#087768] hover:bg-[#065e52] rounded-lg shadow-md transition flex items-center gap-1.5">
         <span>🚀 원클릭 저장 & 사이트 즉시 배포</span>
       </button>
@@ -96,12 +99,50 @@
     <!-- 하단 저장 플로팅 바 -->
     <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900/90 text-white backdrop-blur-md px-6 py-3.5 rounded-full shadow-2xl flex items-center gap-4">
       <span class="text-xs text-slate-300">수정을 마쳤다면?</span>
-      <button id="floating-download-btn" class="px-4 py-1.5 text-xs font-bold bg-[#087768] hover:bg-emerald-600 rounded-full transition shadow">
-        📥 questions-data.js 다운로드
+      <button id="floating-download-btn" class="px-5 py-2 text-xs font-bold bg-[#087768] hover:bg-emerald-600 rounded-full transition shadow-lg flex items-center gap-1.5">
+        <span>🚀 원클릭 저장 & 즉시 배포</span>
       </button>
     </div>
 
   </main>
+
+  <!-- 팀원 클라우드 배포 인증 모달 -->
+  <div id="auth-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-slate-100">
+      <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+        <h3 class="font-bold text-slate-900 flex items-center gap-2 text-base">
+          <span class="text-xl">🔐</span> 팀원 클라우드 실시간 배포 인증
+        </h3>
+        <button type="button" id="close-modal-btn" class="text-slate-400 hover:text-slate-600 text-lg font-bold">✕</button>
+      </div>
+      <p id="modal-alert-msg" class="text-xs text-slate-600 mb-4 leading-relaxed bg-amber-50 border border-amber-200 p-2.5 rounded-lg hidden">
+      </p>
+      <p class="text-xs text-slate-500 mb-4 leading-relaxed">
+        외부인의 무단 수정을 방지하기 위해 <strong>팀원 전용 비밀번호</strong>를 확인합니다. 입력하신 정보는 브라우저에 안전하게 저장되어 다음부터는 묻지 않습니다.
+      </p>
+      <div class="space-y-3 mb-6">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">팀원 비밀번호</label>
+          <input type="password" id="modal-passcode" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm font-medium focus:border-[#087768] outline-none" placeholder="bebesup2026!" value="bebesup2026!" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">수정자 이름 (선택: 배포 기록용)</label>
+          <input type="text" id="modal-author" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm font-medium focus:border-[#087768] outline-none" placeholder="예: 홍길동 매니저" />
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">GitHub 개인 토큰 (선택: Netlify 미연동 시)</label>
+          <input type="password" id="modal-token" class="w-full p-2.5 border border-slate-300 rounded-lg text-xs font-mono focus:border-[#087768] outline-none" placeholder="ghp_... (Netlify 환경변수 설정 시 생략 가능)" />
+          <span class="text-[11px] text-slate-400 block mt-1">※ Netlify 관리자 환경변수에 등록되어 있으면 빈칸으로 두셔도 됩니다.</span>
+        </div>
+      </div>
+      <div class="flex items-center justify-end gap-2">
+        <button type="button" id="cancel-modal-btn" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition">취소</button>
+        <button type="button" id="confirm-save-btn" class="px-5 py-2 text-xs font-bold text-white bg-[#087768] hover:bg-[#065e52] rounded-lg shadow transition">
+          🚀 저장 & 라이브 배포 진행
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- 원본 데이터 로드 -->
   <script src="./questions-data.js"></script>
@@ -264,38 +305,181 @@ const SURVEY_CONDITIONS = {
 `;
     }
 
-    // 1. 실시간 서버 직접 저장 & 자동 배포
-    async function saveAndDeployDirectly() {
+    // 모달 제어
+    const authModal = document.getElementById("auth-modal");
+    const modalPasscode = document.getElementById("modal-passcode");
+    const modalAuthor = document.getElementById("modal-author");
+    const modalToken = document.getElementById("modal-token");
+    const modalAlertMsg = document.getElementById("modal-alert-msg");
+
+    function openAuthModal(alertMsg = "") {
+      modalPasscode.value = localStorage.getItem("bebesup_team_passcode") || "bebesup2026!";
+      modalAuthor.value = localStorage.getItem("bebesup_team_author") || "";
+      modalToken.value = localStorage.getItem("bebesup_team_token") || "";
+      if (alertMsg) {
+        modalAlertMsg.textContent = alertMsg;
+        modalAlertMsg.classList.remove("hidden");
+      } else {
+        modalAlertMsg.classList.add("hidden");
+      }
+      authModal.classList.remove("hidden");
+    }
+
+    function closeAuthModal() {
+      authModal.classList.add("hidden");
+    }
+
+    document.getElementById("close-modal-btn").addEventListener("click", closeAuthModal);
+    document.getElementById("cancel-modal-btn").addEventListener("click", closeAuthModal);
+    document.getElementById("auth-settings-btn").addEventListener("click", () => openAuthModal());
+
+    document.getElementById("confirm-save-btn").addEventListener("click", () => {
+      const passcode = modalPasscode.value.trim();
+      const author = modalAuthor.value.trim();
+      const token = modalToken.value.trim();
+
+      if (!passcode) {
+        alert("팀원 비밀번호를 입력해주세요.");
+        return;
+      }
+
+      localStorage.setItem("bebesup_team_passcode", passcode);
+      if (author) localStorage.setItem("bebesup_team_author", author);
+      if (token) localStorage.setItem("bebesup_team_token", token);
+
+      closeAuthModal();
+      executeSave(passcode, token, author);
+    });
+
+    // 1. 실시간 클라우드 / 로컬 저장 & 자동 배포 실행
+    async function executeSave(passcode, token, author) {
       const btn = document.getElementById("direct-save-btn");
       const floatingBtn = document.getElementById("floating-download-btn");
       const origText = btn ? btn.innerHTML : "";
       if (btn) { btn.innerHTML = "<span>⏳ 서버 저장 및 자동 배포 중...</span>"; btn.disabled = true; }
-      if (floatingBtn) { floatingBtn.textContent = "⏳ 저장 및 배포 중..."; floatingBtn.disabled = true; }
+      if (floatingBtn) { floatingBtn.innerHTML = "<span>⏳ 배포 중...</span>"; floatingBtn.disabled = true; }
 
       const fileContent = generateJsFileContent();
+      let saved = false;
 
-      try {
-        const res = await fetch("http://localhost:3030/api/save", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ fileContent })
-        });
-        const result = await res.json();
-        if (result.success) {
-          alert("🎉 완벽하게 저장되었습니다!\n\nNetlify로 즉시 전송되어 약 20초 후 실제 사이트(bebesup-survey.netlify.app)에 자동 반영됩니다.");
-        } else {
-          throw new Error(result.error);
+      // 단계 A: 만약 질문자님의 컴퓨터(localhost)에서 작업 중이면 로컬 파이썬 서버로 우선 전송
+      if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
+        try {
+          const res = await fetch("http://localhost:3030/api/save", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ fileContent })
+          });
+          const result = await res.json();
+          if (result.success) {
+            saved = true;
+          }
+        } catch (e) {
+          console.log("로컬 서버 미응답, 클라우드 저장으로 진행");
         }
-      } catch (err) {
-        console.warn("로컬 서버 통신 실패, 파일 다운로드로 백업:", err);
-        downloadUpdatedJsFile();
-      } finally {
-        if (btn) { btn.innerHTML = origText; btn.disabled = false; }
-        if (floatingBtn) { floatingBtn.textContent = "📥 questions-data.js 다운로드"; floatingBtn.disabled = false; }
       }
+
+      // 단계 B: 다른 팀원이거나 로컬 서버가 없는 경우, Netlify 클라우드 함수(/api/save)로 전송
+      if (!saved) {
+        try {
+          const res = await fetch("/api/save", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              fileContent,
+              passcode: passcode || localStorage.getItem("bebesup_team_passcode") || "bebesup2026!",
+              token: token || localStorage.getItem("bebesup_team_token") || "",
+              author: author || localStorage.getItem("bebesup_team_author") || ""
+            })
+          });
+
+          const result = await res.json();
+          if (result.success) {
+            saved = true;
+          } else {
+            if (result.code === "INVALID_PASSCODE" || result.code === "MISSING_GITHUB_TOKEN" || result.code === "GITHUB_AUTH_FAILED") {
+              openAuthModal(result.error);
+              if (btn) { btn.innerHTML = origText; btn.disabled = false; }
+              if (floatingBtn) { floatingBtn.innerHTML = "<span>🚀 원클릭 저장 & 즉시 배포</span>"; floatingBtn.disabled = false; }
+              return;
+            }
+            throw new Error(result.error || "클라우드 저장 실패");
+          }
+        } catch (cloudErr) {
+          console.warn("Netlify 함수 통신 에러, 브라우저 직접 깃허브 API 폴백 시도:", cloudErr);
+
+          // 단계 C: 브라우저 직접 GitHub REST API 호출 폴백
+          const directToken = token || localStorage.getItem("bebesup_team_token");
+          if (directToken) {
+            try {
+              const owner = "bebesupcs";
+              const repo = "survey";
+              const path = "standalone-preview/questions-data.js";
+              const getRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=main`, {
+                headers: { Authorization: `Bearer ${directToken}`, Accept: "application/vnd.github.v3+json" }
+              });
+              let sha = null;
+              if (getRes.ok) {
+                const fData = await getRes.json();
+                sha = fData.sha;
+              }
+              const authorStr = author || localStorage.getItem("bebesup_team_author") || "Team Member";
+              const putRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+                method: "PUT",
+                headers: {
+                  Authorization: `Bearer ${directToken}`,
+                  Accept: "application/vnd.github.v3+json",
+                  "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                  message: `Update questions-data.js via online editor by ${authorStr}`,
+                  content: btoa(unescape(encodeURIComponent(fileContent))),
+                  sha: sha || undefined,
+                  branch: "main"
+                })
+              });
+              if (putRes.ok) {
+                saved = true;
+              } else {
+                const putErr = await putRes.json().catch(() => ({}));
+                throw new Error(putErr.message || "GitHub API 오류");
+              }
+            } catch (ghErr) {
+              alert(`⚠️ 저장 중 오류가 발생했습니다: ${ghErr.message}\n\n안전을 위해 수정한 파일이 다운로드됩니다.`);
+              downloadUpdatedJsFile();
+            }
+          } else {
+            alert(`⚠️ 클라우드 배포 오류: ${cloudErr.message}\n\n설정(⚙️)에서 GitHub 토큰을 등록하시거나, 다운로드된 파일로 백업하세요.`);
+            downloadUpdatedJsFile();
+          }
+        }
+      }
+
+      if (saved) {
+        alert("🎉 완벽하게 저장되었습니다!\n\nGitHub에 실시간으로 커밋되었으며, Netlify가 약 20초 후 라이브 사이트(bebesup-survey.netlify.app)에 자동 반영합니다.");
+      }
+
+      if (btn) { btn.innerHTML = origText; btn.disabled = false; }
+      if (floatingBtn) { floatingBtn.innerHTML = "<span>🚀 원클릭 저장 & 즉시 배포</span>"; floatingBtn.disabled = false; }
     }
 
-    // 2. 파일 다운로드 (백업용)
+    // 2. 저장 버튼 클릭 시 진입점
+    function saveAndDeployDirectly() {
+      const savedPasscode = localStorage.getItem("bebesup_team_passcode") || "bebesup2026!";
+      const savedToken = localStorage.getItem("bebesup_team_token") || "";
+      const savedAuthor = localStorage.getItem("bebesup_team_author") || "";
+
+      // 로컬호스트 실행 중이면 즉시 진행
+      if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
+        executeSave(savedPasscode, savedToken, savedAuthor);
+        return;
+      }
+
+      // 온라인 환경이면 저장된 인증정보로 우선 시도
+      executeSave(savedPasscode, savedToken, savedAuthor);
+    }
+
+    // 3. 파일 다운로드 (백업용)
     function downloadUpdatedJsFile() {
       const fileContent = generateJsFileContent();
       const blob = new Blob([fileContent], { type: "text/javascript;charset=utf-8" });
