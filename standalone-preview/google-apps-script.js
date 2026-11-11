@@ -215,7 +215,6 @@ function refreshDashboard(book, questions) {
   const qList = Array.isArray(questions) && questions.length > 0 ? questions : getSurveyQuestions();
 
   dashSheet.clear();
-  dashSheet.setHideGridlines(false);
 
   // 기본 컬럼 너비 세팅
   dashSheet.setColumnWidth(1, 60);   // A: 순위
