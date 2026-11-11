@@ -1,6 +1,6 @@
 /**
  * 베베숲 고객 경험 & 브랜드 전환 설문조사 Google Apps Script
- * 통합 대시보드 & CRM 엔진 (2026 최신 개정판 - 사람이 읽기 쉬운 Raw 데이터 구조)
+ * 완전 자동화 대시보드 & CRM 엔진 (2026 최신 개정판 - 6대 핵심 테마 & 동적 질문 연동)
  * 스프레드시트 ID: 1chXyMf9FfRXaO4LZIzB2Vj4K89MuwzSvilsOHOMX82s
  */
 
@@ -19,6 +19,18 @@ const ALLOWED_SHEETS = [
   RAW_DATA_SHEET
 ];
 
+// 테마별 브랜드 컬러 매핑 (6개 대주제)
+const SECTION_COLORS = [
+  '#087768', // 1. 나의 물티슈 사용 (Bebesup Green)
+  '#0284C7', // 2. 사용 제품 & 구매 채널 (Sky Blue)
+  '#D97706', // 3. 물티슈 선택 경험 (Amber)
+  '#7C3AED', // 4. 베베숲 이용 경험 (Deep Violet)
+  '#059669', // 5. 물티슈 너머 & 신제품 제언 (Emerald)
+  '#DB2777'  // 6. 경품 응모 & 인터뷰 신청 (Rose Pink)
+];
+
+const SECTION_ICONS = ['🎯', '🔄', '🔍', '🌿', '🚀', '🎁'];
+
 function json(value) {
   return ContentService.createTextOutput(JSON.stringify(value)).setMimeType(ContentService.MimeType.JSON);
 }
@@ -34,26 +46,45 @@ function getOrCreate(book, name) {
   return book.getSheetByName(name) || book.insertSheet(name);
 }
 
-// 🌐 실시간 라이브 설문에서 최신 31개 질문과 보기를 자동으로 가져오는 함수
-function getSurveyQuestions() {
+// 🌐 실시간 라이브 설문에서 최신 질문과 섹션 목록을 자동으로 가져오는 함수 (비주얼 에디터 변경 실시간 동기화)
+function getSurveyData() {
   try {
     const url = 'https://bebesup-survey.netlify.app/questions-data.js?v=' + new Date().getTime();
     const res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
     const text = res.getContentText();
-    const match = text.match(/const SURVEY_QUESTIONS\s*=\s*(\[[\s\S]*?\n\]);/);
-    if (match) {
-      return JSON.parse(match[1]);
+    const qMatch = text.match(/const SURVEY_QUESTIONS\s*=\s*(\[[\s\S]*?\n\]);/);
+    const sMatch = text.match(/const SECTION_TITLES\s*=\s*(\[[\s\S]*?\n\]);/);
+    const questions = qMatch ? JSON.parse(qMatch[1]) : [];
+    const sections = sMatch ? JSON.parse(sMatch[1]) : [
+      '나의 물티슈 사용',
+      '사용 제품 & 구매 채널',
+      '물티슈 선택 경험',
+      '베베숲 이용 경험',
+      '물티슈 너머 & 신제품 제언',
+      '경품 응모 & 인터뷰 신청'
+    ];
+    if (questions.length > 0) {
+      return { questions, sections };
     }
   } catch (err) {
     Logger.log('Netlify 질문 로드 오류: ' + err.message);
   }
-  return [];
+  return {
+    questions: [],
+    sections: [
+      '나의 물티슈 사용',
+      '사용 제품 & 구매 채널',
+      '물티슈 선택 경험',
+      '베베숲 이용 경험',
+      '물티슈 너머 & 신제품 제언',
+      '경품 응모 & 인터뷰 신청'
+    ]
+  };
 }
 
 /**
- * 📌 [사람이 읽기 쉬운 1문항 1열 직관적 헤더 생성]
- * 복수선택이라도 0/1 더미 컬럼을 만들지 않고, 질문당 1개 컬럼에 선택한 답변들을
- * 깔끔한 콤마(,) 구분 텍스트로 저장하여 누구나 엑셀/시트에서 바로 읽을 수 있게 합니다.
+ * 📌 [사람이 읽기 쉬운 직관적 헤더 생성]
+ * 질문당 1개 컬럼에 선택한 답변들을 깔끔한 콤마(,) 구분 텍스트로 저장
  */
 function buildHeaders(questions) {
   const headers = ['No', '응답ID', '제출일시', '고객유형'];
@@ -68,7 +99,6 @@ function buildHeaders(questions) {
 
 /**
  * 🧹 [불필요/레거시 시트 자동 정리 함수]
- * 허용된 4대 핵심 시트 외의 모든 낡거나 불필요한 시트(Sheet1, 이전 시트 등)를 자동 삭제합니다.
  */
 function cleanupLegacySheets(book) {
   const allSheets = book.getSheets();
@@ -88,14 +118,13 @@ function cleanupLegacySheets(book) {
 
 /**
  * 🚀 [전체 시트 초기화 및 통합 대시보드 구축 메인 함수]
- * Apps Script 상단에서 'resetAndSetupFresh' 선택 후 [▶ 실행] 클릭 시:
- * 1. 불필요하고 후져보이는 구형 시트 일괄 삭제/정리
- * 2. [📊 대시보드], [🎙️ 인터뷰 대상자], [💬 고객 VOC], [📋 전체 원본] 4대 시트 자동 구축
- * 3. 폰트, 열 너비, 브랜드 컬러(#087768) 및 시각화 바 차트 완벽 세팅
+ * 질문이 변경되거나 추가되어도 100% 동적으로 대시보드와 원본 시트를 재구축합니다.
  */
 function resetAndSetupFresh() {
   const book = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const questions = getSurveyQuestions();
+  const surveyData = getSurveyData();
+  const questions = surveyData.questions;
+  const sections = surveyData.sections;
 
   if (!questions || questions.length === 0) {
     throw new Error('최신 설문 질문을 불러오지 못했습니다. 네트워크 상태를 확인해주세요.');
@@ -127,7 +156,7 @@ function resetAndSetupFresh() {
   book.moveActiveSheet(4);
   rawSheet.setTabColor('#64748B');
 
-  // 4. [📋 전체_응답_데이터] 시트 초기화 (보기 편한 50개 컬럼 구조)
+  // 4. [📋 전체_응답_데이터] 시트 초기화 (보기 편한 직관적 컬럼 구조)
   rawSheet.clear();
   const headers = buildHeaders(questions);
   if (rawSheet.getMaxColumns() < headers.length) {
@@ -173,7 +202,7 @@ function resetAndSetupFresh() {
   interviewSheet.setColumnWidth(11, 110);
   interviewSheet.setColumnWidth(12, 220);
 
-  // 진행 상태 드롭다운 유효성 검사 규칙 적용 (100개 행 미리 설정)
+  // 진행 상태 드롭다운 유효성 검사 규칙 적용 (100개 행)
   const statusRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(['대기(미접촉)', '연락완료', '인터뷰확정', '인터뷰완료', '부재/거절'], true)
     .setAllowInvalid(false)
@@ -204,34 +233,41 @@ function resetAndSetupFresh() {
   vocSheet.setColumnWidth(8, 260);
   vocSheet.setColumnWidth(9, 360);
 
-  // 7. [📊 베베숲_인사이트_대시보드] 시트 구축 및 갱신
-  refreshDashboard(book, questions);
+  // 7. [📊 베베숲_인사이트_대시보드] 전체 6대 대주제 및 모든 문항 동적 렌더링
+  refreshDashboard(book, questions, sections);
 
-  // 최종 대시보드 시트 활성화
   book.setActiveSheet(dashSheet);
-  Logger.log('🎉 통합 대시보드 및 4대 핵심 시트 개편이 완료되었습니다!');
+  Logger.log('🎉 통합 대시보드(전체 문항 세부 인사이트 엔진) 개편이 완료되었습니다!');
 }
 
 /**
- * 📊 [대시보드 렌더링 및 통계 자동 계산 함수]
+ * 📊 [대시보드 렌더링 및 6대 대주제 전체 문항 자동 계산 함수]
+ * 질문이 변경되거나 보기가 추가/수정되어도 100% 자동으로 반영됩니다.
  */
-function refreshDashboard(book, questions) {
+function refreshDashboard(book, questions, sections) {
   const dashSheet = getOrCreate(book, DASHBOARD_SHEET);
   const rawSheet = getOrCreate(book, RAW_DATA_SHEET);
-  const qList = Array.isArray(questions) && questions.length > 0 ? questions : getSurveyQuestions();
+
+  let qList = questions;
+  let secList = sections;
+  if (!qList || qList.length === 0) {
+    const data = getSurveyData();
+    qList = data.questions;
+    secList = data.sections;
+  }
 
   dashSheet.clear();
 
   // 기본 컬럼 너비 세팅
   dashSheet.setColumnWidth(1, 60);   // A: 순위
-  dashSheet.setColumnWidth(2, 340);  // B: 항목명
+  dashSheet.setColumnWidth(2, 360);  // B: 항목명 (선택지)
   dashSheet.setColumnWidth(3, 85);   // C: 응답수
   dashSheet.setColumnWidth(4, 90);   // D: 비율
-  dashSheet.setColumnWidth(5, 220);  // E: 시각화 바 차트
-  dashSheet.setColumnWidth(6, 120);  // F: 부가 정보
-  dashSheet.setColumnWidth(7, 120);  // G: 부가 정보
+  dashSheet.setColumnWidth(5, 230);  // E: 시각화 바 차트
+  dashSheet.setColumnWidth(6, 110);  // F: 비고
+  dashSheet.setColumnWidth(7, 110);  // G: 비고
 
-  // 데이터 집계
+  // 원본 데이터 집계
   const lastRow = rawSheet.getLastRow();
   const totalCount = lastRow > 1 ? lastRow - 1 : 0;
 
@@ -277,16 +313,16 @@ function refreshDashboard(book, questions) {
   const interviewRate = totalCount > 0 ? Math.round((interviewCount / totalCount) * 100) : 0;
   const prizeRate = totalCount > 0 ? Math.round((prizeCount / totalCount) * 100) : 0;
 
-  // 1. 헤더 타이틀 배너
+  // 1. 헤더 메인 타이틀 배너
   dashSheet.getRange('A1:G1').merge();
-  dashSheet.getRange('A1').setValue('🌿 베베숲(Bebesup) 고객 경험 & 브랜드 전환 인사이트 대시보드');
+  dashSheet.getRange('A1').setValue('🌿 베베숲(Bebesup) 고객 경험 & 브랜드 전환 통합 인사이트 대시보드');
   dashSheet.getRange('A1').setBackground('#087768').setFontColor('#ffffff').setFontWeight('bold').setFontSize(14).setHorizontalAlignment('center').setVerticalAlignment('middle');
   dashSheet.setRowHeight(1, 46);
 
   // 2. 부제목 / 갱신 일시
   dashSheet.getRange('A2:G2').merge();
   const nowStr = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm:ss');
-  dashSheet.getRange('A2').setValue('최근 데이터 갱신: ' + nowStr + ' (KST)  |  실시간 설문 주소: https://bebesup-survey.netlify.app');
+  dashSheet.getRange('A2').setValue('최근 데이터 갱신: ' + nowStr + ' (KST)  |  실시간 설문 연동: https://bebesup-survey.netlify.app');
   dashSheet.getRange('A2').setFontColor('#64748B').setFontSize(9).setHorizontalAlignment('center');
   dashSheet.setRowHeight(2, 22);
   dashSheet.setRowHeight(3, 12);
@@ -327,63 +363,45 @@ function refreshDashboard(book, questions) {
   dashSheet.setRowHeight(6, 20);
   dashSheet.setRowHeight(7, 18);
 
-  // 4. 세부 통계 섹션 렌더링
+  // 4. 전체 6대 대주제(섹션) 및 각 섹션별 객관식 문항 동적 렌더링
   let currentRow = 8;
 
-  // [섹션 1] Q6: 베베숲 정착 및 선택 이유 Top 순위
-  currentRow = renderSection(dashSheet, currentRow, {
-    title: '🏆 1. 베베숲 정착 및 전환 요인 Top 순위 (Q6: 타사 대비 베베숲을 정착/선택한 이유)',
-    qId: 'Q6',
-    color: '#087768',
-    questions: qList,
-    rows: rows,
-    totalCount: totalCount,
-    findCol: findCol
-  });
+  for (let secIdx = 0; secIdx < secList.length; secIdx++) {
+    const secTitle = secList[secIdx];
+    const secThemeColor = SECTION_COLORS[secIdx % SECTION_COLORS.length];
+    const secIcon = SECTION_ICONS[secIdx % SECTION_ICONS.length];
 
-  // [섹션 2] Q17: 베베숲 사용 중 불편 및 아쉬운 점
-  currentRow = renderSection(dashSheet, currentRow, {
-    title: '⚠️ 2. 베베숲 사용 중 불편 및 아쉬운 점 (Q17: 이탈 방지를 위한 시급 개선 VOC)',
-    qId: 'Q17',
-    color: '#E11D48',
-    questions: qList,
-    rows: rows,
-    totalCount: totalCount,
-    findCol: findCol
-  });
+    // 해당 섹션에 속한 객관식/점수 문항 필터링
+    const secQuestions = qList.filter(q => q.section === secIdx && (q.type === 'single' || q.type === 'multi' || q.type === 'score'));
+    if (secQuestions.length === 0) continue;
 
-  // [섹션 3] Q21: 신제품 및 카테고리 확장 수용도
-  currentRow = renderSection(dashSheet, currentRow, {
-    title: '🚀 3. 카테고리 확장 수용도 (Q21: 아기/온가족 스킨케어 및 세제 진출에 대한 반응)',
-    qId: 'Q21',
-    color: '#0284C7',
-    questions: qList,
-    rows: rows,
-    totalCount: totalCount,
-    findCol: findCol
-  });
+    // 대주제 섹션 배너 (구분선)
+    dashSheet.getRange(currentRow, 1, 1, 7).merge();
+    dashSheet.getRange(currentRow, 1).setValue(secIcon + ' [대주제 ' + (secIdx + 1) + '] ' + secTitle)
+      .setBackground(secThemeColor)
+      .setFontColor('#ffffff')
+      .setFontWeight('bold')
+      .setFontSize(12)
+      .setVerticalAlignment('middle');
+    dashSheet.setRowHeight(currentRow, 36);
+    currentRow++;
 
-  // [섹션 4] Q22: 할인 쿠폰 제공 시 신제품 구매 의향
-  currentRow = renderSection(dashSheet, currentRow, {
-    title: '🎁 4. 전용 쿠폰 제공 시 신제품 구매 의향 (Q22: 크로스셀링 잠재력)',
-    qId: 'Q22',
-    color: '#10B981',
-    questions: qList,
-    rows: rows,
-    totalCount: totalCount,
-    findCol: findCol
-  });
+    // 해당 섹션 내 각 문항별 통계 테이블 렌더링
+    for (let qIdx = 0; qIdx < secQuestions.length; qIdx++) {
+      const q = secQuestions[qIdx];
+      currentRow = renderQuestionTable(dashSheet, currentRow, {
+        q: q,
+        color: secThemeColor,
+        rows: rows,
+        totalCount: totalCount,
+        findCol: findCol
+      });
+    }
 
-  // [섹션 5] Q12: 물티슈 선택 시 어려웠던 점
-  currentRow = renderSection(dashSheet, currentRow, {
-    title: '🔍 5. 물티슈 선택/탐색 과정의 장애요인 (Q12: 고객의 선택 장벽)',
-    qId: 'Q12',
-    color: '#F59E0B',
-    questions: qList,
-    rows: rows,
-    totalCount: totalCount,
-    findCol: findCol
-  });
+    // 대주제 간 여백
+    dashSheet.setRowHeight(currentRow, 18);
+    currentRow++;
+  }
 }
 
 function styleCard(sheet, rangeA1, valColor, bgColor) {
@@ -391,52 +409,74 @@ function styleCard(sheet, rangeA1, valColor, bgColor) {
   range.setBackground(bgColor);
   range.setBorder(true, true, true, true, false, false, '#CBD5E1', SpreadsheetApp.BorderStyle.SOLID);
   
-  // 첫 행 (라벨)
   const topCell = range.getCell(1, 1);
   topCell.setFontSize(10).setFontWeight('bold').setFontColor('#475569').setHorizontalAlignment('center');
 
-  // 중간 행 (숫자)
   const midCell = range.getCell(2, 1);
   midCell.setFontSize(18).setFontWeight('bold').setFontColor(valColor).setHorizontalAlignment('center');
 
-  // 마지막 행 (설명)
   const botCell = range.getCell(3, 1);
   botCell.setFontSize(8).setFontColor('#94A3B8').setHorizontalAlignment('center');
 }
 
-function renderSection(sheet, startRow, cfg) {
-  const { title, qId, color, questions, rows, totalCount, findCol } = cfg;
-  const q = questions.find(item => item.id === qId);
-  const options = q && q.options ? q.options : [];
+/**
+ * 📌 [단일 문항 통계 테이블 동적 생성 함수]
+ * 질문 내용, 선택지 목록, 응답수, 비율, 막대 그래프를 자동 생성합니다.
+ */
+function renderQuestionTable(sheet, startRow, cfg) {
+  const { q, color, rows, totalCount, findCol } = cfg;
 
-  // 섹션 헤더
+  // 문항 타이틀 바
   sheet.getRange(startRow, 1, 1, 7).merge();
-  sheet.getRange(startRow, 1).setValue(title)
-    .setBackground('#087768')
-    .setFontColor('#ffffff')
+  const qTypeBadge = q.type === 'multi' ? ' [복수선택]' : (q.type === 'score' ? ' [10점 만점 평가]' : ' [단일선택]');
+  sheet.getRange(startRow, 1).setValue('▶ [' + q.id + '] ' + q.title + qTypeBadge)
+    .setBackground('#F8FAFC')
+    .setFontColor('#1E293B')
     .setFontWeight('bold')
-    .setFontSize(11)
+    .setFontSize(10)
     .setVerticalAlignment('middle');
-  sheet.setRowHeight(startRow, 32);
+  sheet.setRowHeight(startRow, 28);
 
   // 테이블 헤더
-  const tableHeaders = ['순위', '항목 내용', '응답수', '비율', '시각화 그래프 (비율)', '', ''];
+  const tableHeaders = ['순위', '선택지 항목', '응답수', '비율', '시각화 그래프 (비율)', '', ''];
   sheet.getRange(startRow + 1, 1, 1, 7).setValues([tableHeaders]);
   sheet.getRange(startRow + 1, 1, 1, 7)
     .setBackground('#F1F5F9')
-    .setFontColor('#334155')
+    .setFontColor('#475569')
     .setFontWeight('bold')
     .setFontSize(9)
     .setHorizontalAlignment('center');
-  sheet.setRowHeight(startRow + 1, 24);
+  sheet.setRowHeight(startRow + 1, 22);
 
-  // 옵션별 데이터 집계 (콤마 구분 다중선택 및 단일선택 완벽 호환)
+  // 보기 목록 준비 (Q18 점수 문항은 등급 및 0~10점 옵션 자동 생성)
+  let options = [];
+  if (q.type === 'score') {
+    options = [
+      '추천 고객 (9~10점)',
+      '중립 고객 (7~8점)',
+      '비추천 고객 (0~6점)',
+      '10점', '9점', '8점', '7점', '6점', '5점', '4점', '3점', '2점', '1점', '0점'
+    ];
+  } else {
+    options = Array.isArray(q.options) ? q.options.slice() : [];
+  }
+
+  // 옵션별 데이터 집계
   const stats = options.map(opt => {
     let count = 0;
     if (totalCount > 0) {
       const col = findCol(q.id);
       if (col >= 0) {
-        if (q.type === 'multi') {
+        if (q.type === 'score') {
+          const scores = rows.map(r => Number(r[col])).filter(n => Number.isFinite(n) && n >= 0 && n <= 10);
+          if (opt.startsWith('추천')) count = scores.filter(n => n >= 9).length;
+          else if (opt.startsWith('중립')) count = scores.filter(n => n >= 7 && n <= 8).length;
+          else if (opt.startsWith('비추천')) count = scores.filter(n => n <= 6).length;
+          else {
+            const targetScore = parseInt(opt, 10);
+            count = scores.filter(n => n === targetScore).length;
+          }
+        } else if (q.type === 'multi') {
           count = rows.filter(r => {
             const val = String(r[col] || '');
             return val.split(',').map(s => s.trim()).includes(String(opt).trim());
@@ -450,8 +490,10 @@ function renderSection(sheet, startRow, cfg) {
     return { opt, count, rate };
   });
 
-  // 응답수 내림차순 정렬
-  stats.sort((a, b) => b.count - a.count);
+  // 일반 객관식은 응답수 내림차순 정렬 (점수 문항은 순서 유지)
+  if (q.type !== 'score') {
+    stats.sort((a, b) => b.count - a.count);
+  }
 
   // 행 채우기
   const dataRows = stats.map((item, idx) => {
@@ -495,26 +537,22 @@ function renderSection(sheet, startRow, cfg) {
     // 테두리 및 줄무늬 스타일링
     for (let i = 0; i < dataRows.length; i++) {
       const rowNum = startRow + 2 + i;
-      sheet.setRowHeight(rowNum, 22);
+      sheet.setRowHeight(rowNum, 21);
       if (i % 2 === 1) {
         sheet.getRange(rowNum, 1, 1, 7).setBackground('#F8FAFC');
       }
     }
   }
 
-  // 섹션 간 공백 행
+  // 문항 간 얇은 공백
   const nextRow = startRow + 2 + dataRows.length;
-  sheet.setRowHeight(nextRow, 16);
+  sheet.setRowHeight(nextRow, 12);
   return nextRow + 1;
 }
 
 /**
  * 📌 [설문 응답 실시간 수신 웹훅 함수]
- * Netlify 라이브 설문에서 응답 제출 시:
- * 1. [📋 전체 원본]에 직관적인 한글 답변 행 추가 (복수선택도 한 셀에 콤마 구분으로 깔끔 적재)
- * 2. 인터뷰 동의 고객인 경우 [🎙️ 심층 인터뷰 대상자] CRM 시트에 자동 추가
- * 3. 주관식 의견이 있는 경우 [💬 고객 VOC] 시트에 자동 추가
- * 4. [📊 베베숲 인사이트 대시보드] 통계 및 차트 실시간 자동 갱신
+ * 라이브 설문에서 응답 제출 시 모든 시트와 대시보드를 100% 실시간 갱신합니다.
  */
 function doPost(e) {
   let lock;
@@ -540,12 +578,14 @@ function doPost(e) {
       return json({ ok: true, id: data.id });
     }
 
-    const questions = Array.isArray(data.questions) && data.questions.length > 0 ? data.questions : getSurveyQuestions();
+    const surveyData = getSurveyData();
+    const questions = Array.isArray(data.questions) && data.questions.length > 0 ? data.questions : surveyData.questions;
+    const sections = surveyData.sections;
     const customerType = data.answers.Q13 || (Array.isArray(data.answers.Q1) ? data.answers.Q1.join(', ') : data.answers.Q1) || '';
     const submittedAt = data.submittedAt || Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm:ss');
 
     // 1. [📋 전체_응답_데이터] 사람이 읽기 쉬운 단일 행 조립
-    const nextRowNo = Math.max(1, rawSheet.getLastRow()); // 1행이 헤더이므로 다음은 1, 2, ...
+    const nextRowNo = Math.max(1, rawSheet.getLastRow());
     const rawRow = [
       nextRowNo,
       data.id,
@@ -557,7 +597,7 @@ function doPost(e) {
       const v = data.answers[q.id];
       let answerText = '';
       if (Array.isArray(v)) {
-        answerText = v.join(', '); // 복수선택은 "항목1, 항목2"로 읽기 쉽게 통합!
+        answerText = v.join(', ');
       } else if (v !== null && v !== undefined) {
         answerText = String(v);
       }
@@ -613,8 +653,8 @@ function doPost(e) {
 
     SpreadsheetApp.flush();
 
-    // 4. [📊 대시보드] 통계 및 차트 실시간 자동 갱신
-    refreshDashboard(book, questions);
+    // 4. [📊 대시보드] 전체 6대 대주제 및 모든 통계 실시간 자동 갱신
+    refreshDashboard(book, questions, sections);
 
     return json({ ok: true, id: data.id });
   } catch (err) {
