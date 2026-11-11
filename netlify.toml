@@ -6,3 +6,8 @@
   from = "/api/save"
   to = "/.netlify/functions/save"
   status = 200
+
+[[redirects]]
+  from = "/api/submit"
+  to = "/.netlify/functions/submit"
+  status = 200

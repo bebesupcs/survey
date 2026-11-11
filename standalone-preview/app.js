@@ -577,11 +577,40 @@
   });
 
   // Survey Submit Completion
-  function submitSurvey() {
+  // Survey Submit Completion
+  async function submitSurvey() {
     isCompleted = true;
     prevBtn.style.display = "none";
     nextBtn.style.display = "none";
     progressTrackEl.style.width = "100%";
+
+    // Show temporary submitting indicator
+    sectionContentEl.innerHTML = `
+      <div class="success-card" style="padding: 60px 20px;">
+        <div class="eyebrow">SUBMITTING</div>
+        <h2>소중한 의견을 안전하게 저장하고 있습니다...</h2>
+        <p style="color:var(--text-muted); margin-top:12px;">잠시만 기다려주세요.</p>
+      </div>
+    `;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    // Send to Google Sheets via Netlify Function /api/submit
+    try {
+      const respId = `bebesup-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      await fetch("/api/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: respId,
+          submittedAt: new Date().toISOString(),
+          version: "20261111_v1",
+          answers: answers,
+          questions: SURVEY_QUESTIONS
+        })
+      });
+    } catch (e) {
+      console.warn("Spreadsheet submit error:", e);
+    }
 
     const interviewJoined = answers["Q24-interview"] && answers["Q24-interview"].includes("참여");
 
