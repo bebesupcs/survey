@@ -1,6 +1,6 @@
 /**
  * 베베숲 고객 경험 & 브랜드 전환 설문조사 Google Apps Script
- * 통합 대시보드 & CRM 엔진 (2026 최신 개정판)
+ * 통합 대시보드 & CRM 엔진 (2026 최신 개정판 - 사람이 읽기 쉬운 Raw 데이터 구조)
  * 스프레드시트 ID: 1chXyMf9FfRXaO4LZIzB2Vj4K89MuwzSvilsOHOMX82s
  */
 
@@ -50,18 +50,17 @@ function getSurveyQuestions() {
   return [];
 }
 
-// 📌 질문 목록으로부터 헤더 컬럼 목록(107개 열) 자동 생성
+/**
+ * 📌 [사람이 읽기 쉬운 1문항 1열 직관적 헤더 생성]
+ * 복수선택이라도 0/1 더미 컬럼을 만들지 않고, 질문당 1개 컬럼에 선택한 답변들을
+ * 깔끔한 콤마(,) 구분 텍스트로 저장하여 누구나 엑셀/시트에서 바로 읽을 수 있게 합니다.
+ */
 function buildHeaders(questions) {
-  const headers = ['응답ID', '제출일시', '설문버전', '고객유형'];
+  const headers = ['No', '응답ID', '제출일시', '고객유형'];
   for (const q of questions) {
-    headers.push(q.id);
+    headers.push('[' + q.id + '] ' + q.title);
     if (q.options && q.options.some(o => o.includes('기타'))) {
-      headers.push(q.id + '_기타');
-    }
-    if (q.type === 'multi' && Array.isArray(q.options)) {
-      for (const opt of q.options) {
-        headers.push(q.id + ' | ' + opt);
-      }
+      headers.push('[' + q.id + '_기타]');
     }
   }
   return headers;
@@ -128,7 +127,7 @@ function resetAndSetupFresh() {
   book.moveActiveSheet(4);
   rawSheet.setTabColor('#64748B');
 
-  // 4. [📋 전체_응답_데이터] 시트 초기화
+  // 4. [📋 전체_응답_데이터] 시트 초기화 (보기 편한 50개 컬럼 구조)
   rawSheet.clear();
   const headers = buildHeaders(questions);
   if (rawSheet.getMaxColumns() < headers.length) {
@@ -138,7 +137,14 @@ function resetAndSetupFresh() {
   rawSheet.setFrozenRows(1);
   const rawHeader = rawSheet.getRange(1, 1, 1, headers.length);
   rawHeader.setBackground('#087768').setFontColor('#ffffff').setFontWeight('bold').setFontSize(9);
-  rawSheet.autoResizeColumns(1, Math.min(10, headers.length));
+  
+  rawSheet.setColumnWidth(1, 45);   // No
+  rawSheet.setColumnWidth(2, 130);  // 응답ID
+  rawSheet.setColumnWidth(3, 130);  // 제출일시
+  rawSheet.setColumnWidth(4, 130);  // 고객유형
+  for (let c = 5; c <= headers.length; c++) {
+    rawSheet.setColumnWidth(c, 240); // 질문별 컬럼 너비 넉넉하게 세팅
+  }
 
   // 5. [🎙️ 1대1_심층인터뷰_대상자] 시트 초기화
   interviewSheet.clear();
@@ -241,7 +247,7 @@ function refreshDashboard(book, questions) {
     const rawData = rawSheet.getDataRange().getValues();
     headers = rawData[0].map(String);
     rows = rawData.slice(1);
-    findCol = name => headers.indexOf(name);
+    findCol = qId => headers.findIndex(h => h.startsWith('[' + qId + ']') || h === qId);
 
     // Q18 추천 점수 분석
     const npsIdx = findCol('Q18');
@@ -424,16 +430,20 @@ function renderSection(sheet, startRow, cfg) {
     .setHorizontalAlignment('center');
   sheet.setRowHeight(startRow + 1, 24);
 
-  // 옵션별 데이터 집계
+  // 옵션별 데이터 집계 (콤마 구분 다중선택 및 단일선택 완벽 호환)
   const stats = options.map(opt => {
     let count = 0;
     if (totalCount > 0) {
-      if (q.type === 'multi') {
-        const col = findCol(q.id + ' | ' + opt);
-        if (col >= 0) count = rows.filter(r => Number(r[col]) === 1).length;
-      } else {
-        const col = findCol(q.id);
-        if (col >= 0) count = rows.filter(r => String(r[col] || '').trim() === String(opt).trim()).length;
+      const col = findCol(q.id);
+      if (col >= 0) {
+        if (q.type === 'multi') {
+          count = rows.filter(r => {
+            const val = String(r[col] || '');
+            return val.split(',').map(s => s.trim()).includes(String(opt).trim());
+          }).length;
+        } else {
+          count = rows.filter(r => String(r[col] || '').trim() === String(opt).trim()).length;
+        }
       }
     }
     const rate = totalCount > 0 ? (count / totalCount) : 0;
@@ -501,7 +511,7 @@ function renderSection(sheet, startRow, cfg) {
 /**
  * 📌 [설문 응답 실시간 수신 웹훅 함수]
  * Netlify 라이브 설문에서 응답 제출 시:
- * 1. [📋 전체 원본]에 안전하게 행 추가
+ * 1. [📋 전체 원본]에 직관적인 한글 답변 행 추가 (복수선택도 한 셀에 콤마 구분으로 깔끔 적재)
  * 2. 인터뷰 동의 고객인 경우 [🎙️ 심층 인터뷰 대상자] CRM 시트에 자동 추가
  * 3. 주관식 의견이 있는 경우 [💬 고객 VOC] 시트에 자동 추가
  * 4. [📊 베베숲 인사이트 대시보드] 통계 및 차트 실시간 자동 갱신
@@ -526,7 +536,7 @@ function doPost(e) {
     const vocSheet = getOrCreate(book, VOC_SHEET);
 
     // 중복 제출 방지 (동일 응답 ID)
-    if (rawSheet.getLastRow() > 1 && rawSheet.getRange(2, 1, rawSheet.getLastRow() - 1, 1).createTextFinder(data.id).matchEntireCell(true).findNext()) {
+    if (rawSheet.getLastRow() > 1 && rawSheet.getRange(2, 2, rawSheet.getLastRow() - 1, 1).createTextFinder(data.id).matchEntireCell(true).findNext()) {
       return json({ ok: true, id: data.id });
     }
 
@@ -534,37 +544,31 @@ function doPost(e) {
     const customerType = data.answers.Q13 || (Array.isArray(data.answers.Q1) ? data.answers.Q1.join(', ') : data.answers.Q1) || '';
     const submittedAt = data.submittedAt || Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm:ss');
 
-    const values = {
-      '응답ID': data.id,
-      '제출일시': submittedAt,
-      '설문버전': data.version || '20261111',
-      '고객유형': customerType
-    };
+    // 1. [📋 전체_응답_데이터] 사람이 읽기 쉬운 단일 행 조립
+    const nextRowNo = Math.max(1, rawSheet.getLastRow()); // 1행이 헤더이므로 다음은 1, 2, ...
+    const rawRow = [
+      nextRowNo,
+      data.id,
+      submittedAt,
+      customerType
+    ];
 
     for (const q of questions) {
       const v = data.answers[q.id];
-      values[q.id] = Array.isArray(v) ? JSON.stringify(v) : (q.type === 'score' && v !== undefined ? Number(v) : (v ?? ''));
-      if (q.options && q.options.some(o => o.includes('기타'))) {
-        values[q.id + '_기타'] = data.answers[q.id + '_other'] || '';
+      let answerText = '';
+      if (Array.isArray(v)) {
+        answerText = v.join(', '); // 복수선택은 "항목1, 항목2"로 읽기 쉽게 통합!
+      } else if (v !== null && v !== undefined) {
+        answerText = String(v);
       }
-      if (q.type === 'multi' && Array.isArray(q.options)) {
-        for (const option of q.options) {
-          values[q.id + ' | ' + option] = (v === undefined || !Array.isArray(v)) ? '' : (v.includes(option) ? 1 : 0);
-        }
+      rawRow.push(safe(answerText));
+
+      if (q.options && q.options.some(o => o.includes('기타'))) {
+        rawRow.push(safe(data.answers[q.id + '_other'] || ''));
       }
     }
 
-    // 1. [📋 전체_응답_데이터] 행 추가
-    let headers = rawSheet.getLastRow() ? rawSheet.getRange(1, 1, 1, rawSheet.getLastColumn()).getValues()[0] : buildHeaders(questions);
-    for (const key of Object.keys(values)) {
-      if (!headers.includes(key)) headers.push(key);
-    }
-    if (rawSheet.getMaxColumns() < headers.length) {
-      rawSheet.insertColumnsAfter(rawSheet.getMaxColumns(), headers.length - rawSheet.getMaxColumns());
-    }
-    rawSheet.getRange(1, 1, 1, headers.length).setValues([headers.map(safe)]);
-    rawSheet.setFrozenRows(1);
-    rawSheet.getRange(rawSheet.getLastRow() + 1, 1, 1, headers.length).setValues([headers.map(h => safe(values[h] ?? ''))]);
+    rawSheet.getRange(rawSheet.getLastRow() + 1, 1, 1, rawRow.length).setValues([rawRow]);
 
     // 2. [🎙️ 1대1_심층인터뷰_대상자] 자동 적재 (Q24 참여 의향 '네'인 경우)
     const interviewAgree = String(data.answers['Q24-interview'] || '');
