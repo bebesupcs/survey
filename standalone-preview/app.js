@@ -594,20 +594,34 @@
     `;
     window.scrollTo({ top: 0, behavior: "smooth" });
 
-    // Send to Google Sheets via Netlify Function /api/submit
+    // Send to Google Sheets via Netlify Function /api/submit or direct Google Apps Script
     try {
       const respId = `bebesup-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-      await fetch("/api/submit", {
+      const payload = {
+        action: "submit",
+        id: respId,
+        submittedAt: new Date().toISOString(),
+        version: "20261111_v1",
+        answers: answers,
+        questions: SURVEY_QUESTIONS
+      };
+
+      const res = await fetch("/api/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: respId,
-          submittedAt: new Date().toISOString(),
-          version: "20261111_v1",
-          answers: answers,
-          questions: SURVEY_QUESTIONS
-        })
-      });
+        body: JSON.stringify(payload)
+      }).catch(() => null);
+
+      if (!res || !res.ok) {
+        // Direct fallback to Google Apps Script for GitHub Pages
+        const gasUrl = "https://script.google.com/macros/s/AKfycbzRi-LZcXlrzGYtUaSzfOvYNwbSDku7kphfKX7smZXotDkEUhv_yFaB4v5NwaGfsqt-/exec";
+        await fetch(gasUrl, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        }).catch(err => console.warn("GAS fallback err:", err));
+      }
     } catch (e) {
       console.warn("Spreadsheet submit error:", e);
     }
