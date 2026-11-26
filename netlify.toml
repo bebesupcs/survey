@@ -12,3 +12,8 @@
   from = "/api/submit"
   to = "/.netlify/functions/submit"
   status = 200
+
+[[headers]]
+  for = "/questions-data.js"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"

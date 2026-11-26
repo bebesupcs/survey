@@ -144,8 +144,8 @@
     </div>
   </div>
 
-  <!-- 원본 데이터 로드 -->
-  <script src="./questions-data.js"></script>
+  <!-- 원본 데이터 로드 (캐시 방지) -->
+  <script>document.write('<script src="./questions-data.js?v=' + Date.now() + '"><\/script>');</script>
 
   <script>
     // 복사본 데이터 상태 관리
