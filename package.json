@@ -53,6 +53,5 @@
     "vite": "8.0.13",
     "wrangler": "4.92.0",
     "drizzle-kit": "0.31.10"
-  },
-  "type": "module"
+  }
 }
