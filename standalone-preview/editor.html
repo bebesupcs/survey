@@ -379,10 +379,14 @@ const SURVEY_CONDITIONS = {
         }
       }
 
-      // 단계 B: 다른 팀원이거나 로컬 서버가 없는 경우, Netlify 클라우드 함수(/api/save)로 전송
+      // 단계 B: 다른 팀원이거나 로컬 서버가 없는 경우, 클라우드 함수(/api/save)로 전송
       if (!saved) {
         try {
-          const res = await fetch("/api/save", {
+          const saveApiUrl = (location.hostname === "bebesup-survey.netlify.app")
+            ? "/api/save"
+            : "https://bebesup-survey.netlify.app/api/save";
+
+          const res = await fetch(saveApiUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -457,7 +461,7 @@ const SURVEY_CONDITIONS = {
       }
 
       if (saved) {
-        alert("🎉 완벽하게 저장되었습니다!\n\nGitHub에 실시간으로 커밋되었으며, Netlify가 약 20초 후 라이브 사이트(bebesup-survey.netlify.app)에 자동 반영합니다.");
+        alert("🎉 완벽하게 저장 및 배포되었습니다!\n\nGitHub에 실시간으로 커밋되었으며,\n약 20~30초 후 라이브 사이트에 자동 반영됩니다.\n\n• 설문조사 링크: https://bebesupcs.github.io/survey/");
       }
 
       if (btn) { btn.innerHTML = origText; btn.disabled = false; }
