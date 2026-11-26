@@ -440,6 +440,7 @@ const SURVEY_CONDITIONS = {
               });
               if (putRes.ok) {
                 saved = true;
+                fetch("https://api.netlify.com/build_hooks/6b07d4a63b086b527845b69b", { method: "POST" }).catch(() => {});
               } else {
                 const putErr = await putRes.json().catch(() => ({}));
                 throw new Error(putErr.message || "GitHub API 오류");

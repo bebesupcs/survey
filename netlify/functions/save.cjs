@@ -130,6 +130,14 @@ exports.handler = async function (event, context) {
       };
     }
 
+    // Netlify 빌드 훅 즉시 호출 (실시간 강제 배포)
+    const buildHookUrl = process.env.BUILD_HOOK_URL || "https://api.netlify.com/build_hooks/6b07d4a63b086b527845b69b";
+    try {
+      await fetch(buildHookUrl, { method: "POST" });
+    } catch (hookErr) {
+      console.warn("Build hook trigger warning:", hookErr);
+    }
+
     const commitData = await putRes.json();
     return {
       statusCode: 200,
