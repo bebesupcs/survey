@@ -49,7 +49,7 @@ function getOrCreate(book, name) {
 // 🌐 실시간 라이브 설문에서 최신 질문과 섹션 목록을 자동으로 가져오는 함수 (비주얼 에디터 변경 실시간 동기화)
 function getSurveyData() {
   try {
-    const url = 'https://bebesup-survey.netlify.app/questions-data.js?v=' + new Date().getTime();
+    const url = 'https://bebesupcs.github.io/survey/questions-data.js?v=' + new Date().getTime();
     const res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
     const text = res.getContentText();
     const qMatch = text.match(/const SURVEY_QUESTIONS\s*=\s*(\[[\s\S]*?\n\]);/);
