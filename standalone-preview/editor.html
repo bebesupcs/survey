@@ -22,7 +22,7 @@
       <span class="text-sm font-bold bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-md">설문 전용 편집기</span>
     </div>
     <div class="flex items-center gap-3">
-      <a href="./index.html" target="_blank" class="px-4 py-2 text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition flex items-center gap-1.5">
+      <a href="https://bebesupcs.github.io/survey/index.html" target="_blank" class="px-4 py-2 text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition flex items-center gap-1.5">
         <span>👀 설문 미리보기</span>
       </a>
       <button id="auth-settings-btn" title="팀원 클라우드 배포 설정" class="px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition flex items-center gap-1">
@@ -42,10 +42,11 @@
 
     <!-- 상단 안내 알림 -->
     <div class="mb-8 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-900 flex items-start gap-3">
-      <span class="text-2xl">✏️</span>
+      <span class="text-2xl">💡</span>
       <div class="text-sm">
-        <strong class="font-bold block mb-0.5">코인/토큰 없이 마음껏 수정하세요!</strong>
-        여기서 질문 제목, 선택지 추가/삭제, 경품 혜택 등을 직접 타이핑하여 수정하신 후 우측 상단의 <strong>[💾 변경사항 파일로 다운로드]</strong>를 누르시면 <code>questions-data.js</code> 파일이 다운로드됩니다.
+        <strong class="font-bold block mb-0.5">베베숲 설문 문항 실시간 비주얼 편집기</strong>
+        질문 제목, 보기(선택지), 혜택 안내를 자유롭게 수정하신 후 우측 상단의 <strong>[🚀 원클릭 저장 & 사이트 즉시 배포]</strong>를 누르시면 약 20초 후 라이브 사이트에 자동 반영됩니다.<br/>
+        <span class="text-xs text-emerald-700 mt-1 block font-medium">※ 실시간 배포 사이트: <a href="https://bebesupcs.github.io/survey/" target="_blank" class="underline font-bold">https://bebesupcs.github.io/survey/</a> (Netlify는 무료 한도 초과로 중단되었으므로 반드시 위 GitHub Pages 주소로 확인해주세요)</span>
       </div>
     </div>
 
@@ -461,7 +462,7 @@ const SURVEY_CONDITIONS = {
       }
 
       if (saved) {
-        alert("🎉 완벽하게 저장 및 배포되었습니다!\n\nGitHub에 실시간으로 커밋되었으며,\n약 20~30초 후 라이브 사이트에 자동 반영됩니다.\n\n• 설문조사 링크: https://bebesupcs.github.io/survey/");
+        alert("🎉 완벽하게 저장 및 배포되었습니다!\n\nGitHub에 실시간으로 커밋되었으며,\n약 15~20초 후 라이브 사이트에 100% 자동 반영됩니다.\n\n👉 실시간 반영 확인 링크:\nhttps://bebesupcs.github.io/survey/\n\n(※ Netlify는 무료 크레딧 소진으로 갱신이 중단되었으니, 반드시 위 GitHub Pages 링크로 접속해 확인해주세요!)");
       }
 
       if (btn) { btn.innerHTML = origText; btn.disabled = false; }
